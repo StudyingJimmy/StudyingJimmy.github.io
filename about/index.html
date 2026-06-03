@@ -6,120 +6,184 @@
   <title>Jimmy Yang — 个人信息</title>
   <link rel="stylesheet" href="../style.css">
 </head>
-<body>
+<body class="slide-page">
   <button class="theme-toggle" aria-label="Toggle theme" id="themeToggle">
     <span class="theme-icon-dark">☀</span>
     <span class="theme-icon-light">☾</span>
   </button>
 
-  <main class="sub-page">
-    <!-- Header -->
-    <header class="sub-header">
-      <a href="../" class="sub-back">← Home</a>
-      <h2 class="sub-section-title">
-        <span class="sub-section-number">01</span>个人信息
-      </h2>
-    </header>
+  <!-- Slide dots -->
+  <div class="slide-dots" id="slideDots">
+    <button class="slide-dot active" data-index="0" aria-label="Slide 1"></button>
+    <button class="slide-dot" data-index="1" aria-label="Slide 2"></button>
+    <button class="slide-dot" data-index="2" aria-label="Slide 3"></button>
+  </div>
 
-    <!-- Intro: prose + stat callouts -->
-    <section class="about-grid">
-      <div class="about-text">
-        <p>
-          我叫<strong>杨建明</strong>（Jimmy Yang），上海大学人工智能硕士，即将入职
-          <strong>波克网络科技有限公司</strong>，从事 AI 驱动的质量保障工作。
-        </p>
-        <p>
-          技术背景横跨<em>大语言模型</em>与<em>软件工程</em> &mdash;
-          硕士期间研究多模态大模型的视觉问答，对 Attention 机制有深入理解，
-          发表 SCI 论文 2 篇；实习期间在字节跳动基于 LLM 构建智能体工作流，
-          自动化生成测试用例并显著提升覆盖率。
-        </p>
-      </div>
-      <div class="about-stats">
-        <div class="stat">
-          <span class="stat-number">硕士</span>
-          <span class="stat-label">上海大学 &middot; AI</span>
-        </div>
-        <div class="stat">
-          <span class="stat-number">SCI &times;2</span>
-          <span class="stat-label">多模态 VQA</span>
-        </div>
-        <div class="stat">
-          <span class="stat-number">国奖</span>
-          <span class="stat-label">奖学金</span>
-        </div>
-        <div class="stat">
-          <span class="stat-number">564</span>
-          <span class="stat-label">CET-6</span>
-        </div>
-      </div>
-    </section>
+  <div class="slide-container" id="slideContainer">
 
-    <!-- Education -->
-    <section>
-      <h2 class="section-title">
-        <span class="section-number">I</span>教育经历
-      </h2>
-      <div class="timeline">
-        <div class="timeline-item current">
-          <div class="timeline-marker"></div>
-          <div class="timeline-content">
-            <h3>上海大学 &middot; 人工智能 硕士</h3>
-            <p class="timeline-date">2023.09 &mdash; 2026.06</p>
-            <p class="timeline-desc">
-              研究方向：多模态大语言模型视觉问答（Training-free），对 Attention 机制有深入研究。
+    <!-- Slide 1: Intro -->
+    <section class="slide" id="slide0">
+      <div class="slide-inner">
+        <header class="sub-header">
+          <a href="../" class="sub-back">← Home</a>
+          <h2 class="sub-section-title">
+            <span class="sub-section-number">01</span>个人信息
+          </h2>
+        </header>
+        <div class="about-grid">
+          <div class="about-text">
+            <p>
+              我叫<strong>杨建明</strong>（Jimmy Yang），上海大学人工智能硕士，即将入职
+              <strong>波克网络科技有限公司</strong>，从事 AI 驱动的质量保障工作。
             </p>
-            <div class="honor-item">“华为杯”第21届中国研究生数学建模竞赛 国家二等奖</div>
-            <div class="honor-item">SCI 论文 2 篇 &mdash; 多模态 LLM 视觉问答方向</div>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-marker"></div>
-          <div class="timeline-content">
-            <h3>中国石油大学（华东）&middot; 数据科学与大数据技术 学士</h3>
-            <p class="timeline-date">2019.09 &mdash; 2023.06</p>
-            <p class="timeline-desc">偏数学应用统计方向，主修 Python 数据分析与机器学习。</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Experience -->
-    <section>
-      <h2 class="section-title">
-        <span class="section-number">II</span>实习经历
-      </h2>
-      <div class="timeline">
-        <div class="timeline-item">
-          <div class="timeline-marker"></div>
-          <div class="timeline-content">
-            <div class="timeline-tag">Internship</div>
-            <h3>大模型测试开发实习生</h3>
-            <p class="timeline-org">字节跳动蜜柚网络科技（上海）有限公司</p>
-            <p class="timeline-date">2025.11 &mdash; 2026.02</p>
-            <p class="timeline-desc">
-              基于 LLM 定制智能体工作流，自动生成高质量测试用例，显著提升测试覆盖率；
-              参与大模型产品测试框架的设计与迭代。
+            <p>
+              技术背景横跨<em>大语言模型</em>与<em>软件工程</em> &mdash;
+              硕士期间研究多模态大模型的视觉问答，对 Attention 机制有深入理解，
+              发表 SCI 论文 2 篇；实习期间在字节跳动基于 LLM 构建智能体工作流，
+              自动化生成测试用例并显著提升覆盖率。
             </p>
           </div>
+          <div class="about-stats">
+            <div class="stat">
+              <span class="stat-number">硕士</span>
+              <span class="stat-label">上海大学 &middot; AI</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number">SCI &times;2</span>
+              <span class="stat-label">多模态 VQA</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number">国奖</span>
+              <span class="stat-label">奖学金</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number">564</span>
+              <span class="stat-label">CET-6</span>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Resume CTA -->
-    <div class="resume-cta">
-      <p class="resume-cta-label">For Recruiters</p>
-      <a href="../assets/pdf/future_resume_business.pdf" class="btn-resume" download>
-        招聘 &middot; 获取简历
-      </a>
-    </div>
+    <!-- Slide 2: Education -->
+    <section class="slide" id="slide1">
+      <div class="slide-inner">
+        <h2 class="section-title">
+          <span class="section-number">I</span>教育经历
+        </h2>
+        <div class="timeline">
+          <div class="timeline-item current">
+            <div class="timeline-marker"></div>
+            <div class="timeline-content">
+              <h3>上海大学 &middot; 人工智能 硕士</h3>
+              <p class="timeline-date">2023.09 &mdash; 2026.06</p>
+              <p class="timeline-desc">
+                研究方向：多模态大语言模型视觉问答（Training-free），对 Attention 机制有深入研究。
+              </p>
+              <div class="honor-item">“华为杯”第21届中国研究生数学建模竞赛 国家二等奖</div>
+              <div class="honor-item">SCI 论文 2 篇 &mdash; 多模态 LLM 视觉问答方向</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker"></div>
+            <div class="timeline-content">
+              <h3>中国石油大学（华东）&middot; 数据科学与大数据技术 学士</h3>
+              <p class="timeline-date">2019.09 &mdash; 2023.06</p>
+              <p class="timeline-desc">偏数学应用统计方向，主修 Python 数据分析与机器学习。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <footer class="global-footer">
-      <span class="footer-motto">No pain, no gain.</span>
-      <span class="footer-copy">&copy; 2026 Jimmy Yang</span>
-    </footer>
-  </main>
+    <!-- Slide 3: Experience + Resume -->
+    <section class="slide" id="slide2">
+      <div class="slide-inner">
+        <h2 class="section-title">
+          <span class="section-number">II</span>实习经历
+        </h2>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-marker"></div>
+            <div class="timeline-content">
+              <div class="timeline-tag">Internship</div>
+              <h3>大模型测试开发实习生</h3>
+              <p class="timeline-org">字节跳动蜜柚网络科技（上海）有限公司</p>
+              <p class="timeline-date">2025.11 &mdash; 2026.02</p>
+              <p class="timeline-desc">
+                基于 LLM 定制智能体工作流，自动生成高质量测试用例，显著提升测试覆盖率；
+                参与大模型产品测试框架的设计与迭代。
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="resume-cta" style="margin-top:3rem;">
+          <p class="resume-cta-label">For Recruiters</p>
+          <a href="../assets/pdf/future_resume_business.pdf" class="btn-resume" download>
+            招聘 &middot; 获取简历
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Navigation arrows -->
+  <nav class="slide-nav">
+    <button class="slide-arrow" id="arrowUp" disabled aria-label="Previous slide">↑</button>
+    <button class="slide-arrow" id="arrowDown" aria-label="Next slide">↓</button>
+  </nav>
+
+  <footer class="global-footer">
+    <span class="footer-motto">No pain, no gain.</span>
+    <span class="footer-copy">&copy; 2026 Jimmy Yang</span>
+  </footer>
 
   <script src="../script.js"></script>
+  <script>
+    // Slide navigation
+    const container = document.getElementById('slideContainer');
+    const slides = container.querySelectorAll('.slide');
+    const dots = document.querySelectorAll('.slide-dot');
+    const arrowUp = document.getElementById('arrowUp');
+    const arrowDown = document.getElementById('arrowDown');
+    let current = 0;
+
+    function goTo(index) {
+      if (index < 0 || index >= slides.length) return;
+      slides[index].scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function updateUI() {
+      const rect = container.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      let active = 0;
+      slides.forEach((s, i) => {
+        const sr = s.getBoundingClientRect();
+        if (sr.top <= mid && sr.bottom >= mid) active = i;
+      });
+      if (active !== current) {
+        current = active;
+        dots.forEach((d, i) => d.classList.toggle('active', i === current));
+        arrowUp.disabled = current === 0;
+        arrowDown.disabled = current === slides.length - 1;
+      }
+    }
+
+    container.addEventListener('scroll', updateUI, { passive: true });
+
+    arrowUp.addEventListener('click', () => { if (current > 0) goTo(current - 1); });
+    arrowDown.addEventListener('click', () => { if (current < slides.length - 1) goTo(current + 1); });
+
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => goTo(parseInt(dot.dataset.index)));
+    });
+
+    // Keyboard nav
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); if (current < slides.length - 1) goTo(current + 1); }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); if (current > 0) goTo(current - 1); }
+    });
+  </script>
 </body>
 </html>

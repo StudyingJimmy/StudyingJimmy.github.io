@@ -546,8 +546,9 @@ h1, h2, h3 {
   right: 0;
   z-index: 100;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  gap: 2rem;
   padding: 0.5rem 1.5rem;
   font-size: 0.72rem;
   color: var(--text-muted);
@@ -572,6 +573,96 @@ body.cosmic .global-footer {
 /* Sub-page bottom padding so content isn't hidden behind fixed footer */
 .sub-page {
   padding-bottom: 3.5rem;
+}
+
+/* ============================================================
+   PPT-STYLE SLIDE PAGES (about page)
+   ============================================================ */
+.slide-page {
+  overflow: hidden;
+  height: 100vh;
+}
+.slide-container {
+  height: 100vh;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+}
+.slide-container::-webkit-scrollbar { display: none; }
+.slide {
+  scroll-snap-align: start;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 2rem 4rem;
+}
+.slide-inner {
+  max-width: 700px;
+  width: 100%;
+}
+
+/* Slide navigation arrows */
+.slide-nav {
+  position: fixed;
+  bottom: 4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  gap: 2rem;
+}
+.slide-arrow {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: all 0.25s;
+}
+.slide-arrow:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.slide-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.slide-arrow:disabled:hover {
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
+/* Slide dots indicator */
+.slide-dots {
+  position: fixed;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.slide-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  transition: all 0.3s;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+.slide-dot.active {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 /* --- Animations -------------------------------------------- */
