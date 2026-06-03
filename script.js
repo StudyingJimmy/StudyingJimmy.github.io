@@ -77,13 +77,20 @@ class Particle {
 // --- Star ---------------------------------------------------
 class Star {
   constructor() {
-    this.x = rand(0, W);
-    this.y = rand(0, H);
+    this.ox = rand(0, W);
+    this.oy = rand(0, H);
+    this.x = this.ox; this.y = this.oy;
+    this.depth = rand(0.2, 1.0);
     this.baseAlpha = rand(0.4, 1.0);
     this.phase = rand(0, Math.PI * 2);
     this.speed = rand(0.3, 1.5);
-    this.size = rand(0.8, 2.5);
+    this.size = rand(0.8, 2.5) * (1.3 - this.depth * 0.5);
+    // Warp mode
+    this.warpAngle = 0;
+    this.warpDist = 0;
+    this.warpSpeed = 0;
   }
+  update(px, py) { const f = (1 - this.depth) * 0.025; this.x = this.ox + px * f; this.y = this.oy + py * f; }
   draw(ctx, t, boost) {
     const amp = 0.25 + (boost || 0) * 0.6;
     const freq = 1 + (boost || 0) * 2.5;
@@ -92,6 +99,51 @@ class Star {
     ctx.fillStyle = '#fff';
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.size * (1 + (boost || 0) * 0.8), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Switch to warp tunnel mode
+  initWarp() {
+    const dx = this.ox - cx, dy = this.oy - cy;
+    this.warpAngle = Math.atan2(dy, dx);
+    this.warpDist = Math.sqrt(dx*dx + dy*dy) || 1;
+    this.warpSpeed = this.warpDist * rand(0.8, 2.5);
+  }
+  updateWarp(dt) {
+    // Speed increases with distance (perspective acceleration)
+    this.warpSpeed += this.warpDist * 0.8 * dt;
+    this.warpDist += this.warpSpeed * dt;
+    this.x = cx + Math.cos(this.warpAngle) * this.warpDist;
+    this.y = cy + Math.sin(this.warpAngle) * this.warpDist;
+    // Respawn near center when off screen
+    const diag = Math.sqrt(W*W + H*H);
+    if (this.warpDist > diag * 0.8) {
+      this.warpAngle = rand(0, Math.PI * 2);
+      this.warpDist = rand(15, 50);
+      this.warpSpeed = this.warpDist * rand(0.5, 1.5);
+      this.size = rand(0.5, 2.5);
+    }
+  }
+  drawWarp(ctx) {
+    // Brightness/dim based on distance (near=dim, far=bright trail)
+    const diag = Math.sqrt(W*W + H*H);
+    const t = Math.min(1, this.warpDist / (diag * 0.5));
+    const alpha = 0.15 + t * 0.85;
+    const sz = 0.8 + t * 3.5;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#fff';
+    // Motion streak: elongated toward center
+    const streak = t * 12;
+    const sx = Math.cos(this.warpAngle) * streak;
+    const sy = Math.sin(this.warpAngle) * streak;
+    ctx.beginPath();
+    ctx.moveTo(this.x + sx, this.y + sy);
+    ctx.lineTo(this.x - sx, this.y - sy);
+    ctx.lineWidth = sz * 0.6;
+    ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+    ctx.stroke();
+    // Core dot
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, sz, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -403,6 +455,9 @@ let twIndex = 0, twChar = 0, twTimer = 0, twActive = false, twDone = false;
 const labelContainer = document.getElementById('nebulaLabels');
 let labelEls = [];
 let hoveredNebula = null;
+// Mouse parallax (3D rotation feel)
+let mx = 0, my = 0;     // raw mouse position
+let pmx = 0, pmy = 0;   // smoothed parallax offset
 
 const METEOR_START = 0.3;
 const GATHER_START = 2.2;
@@ -536,9 +591,13 @@ function loop(timestamp) {
   ctx.clearRect(0, 0, W, H);
   ctx.globalAlpha = 1;
 
-  // Stars (sparkle intensely when hovering a nebula)
-  const sparkle = hoveredNebula ? 1 : 0;
-  stars.forEach(s => s.draw(ctx, globalTime, sparkle));
+  // Stars: static during animation, warp tunnel in IDLE
+  if (phase === Phase.IDLE) {
+    stars.forEach(s => { s.updateWarp(dt); s.drawWarp(ctx); });
+  } else {
+    const sparkle = hoveredNebula ? 1 : 0;
+    stars.forEach(s => s.draw(ctx, globalTime, sparkle));
+  }
 
   // --- Meteor ---
   if (!meteor && globalTime > METEOR_START) {
@@ -594,10 +653,11 @@ function loop(timestamp) {
     }
   });
 
-  // --- Show labels ---
+  // --- Show labels + activate warp ---
   if (allFormed && globalTime > LABELS_SHOW && phase !== Phase.IDLE) {
     showLabels();
     phase = Phase.IDLE;
+    stars.forEach(s => s.initWarp()); // kick off time tunnel
   }
   if (phase === Phase.IDLE) updateAllLabelPositions();
 
@@ -610,8 +670,9 @@ function getPos(e) {
   return { x: e.clientX, y: e.clientY };
 }
 function handleMove(e) {
-  if (phase !== Phase.IDLE) return;
   const pos = getPos(e);
+  mx = pos.x; my = pos.y; // always track for parallax
+  if (phase !== Phase.IDLE) return;
   let found = null;
   for (const n of nebulae) {
     if (n.contains(pos.x, pos.y)) { found = n; break; }
@@ -699,8 +760,9 @@ if (canvas) canvas.addEventListener('dblclick', () => {
   // 5. Show labels immediately
   showLabels();
 
-  // 6. Enter idle
+  // 6. Enter idle + warp
   phase = Phase.IDLE;
+  stars.forEach(s => s.initWarp());
 });
 
 // --- Boot ---------------------------------------------------
