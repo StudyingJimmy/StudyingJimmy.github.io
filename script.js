@@ -5,14 +5,18 @@
 
 // --- Canvas Setup -------------------------------------------
 const canvas = document.getElementById('cosmicCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas ? canvas.getContext('2d') : null;
 let W, H, cx, cy;
 
 function resize() {
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
+  W = window.innerWidth;
+  H = window.innerHeight;
   cx = W * 0.5;
   cy = H * 0.48;
+  if (canvas) {
+    canvas.width = W;
+    canvas.height = H;
+  }
 }
 resize();
 window.addEventListener('resize', resize);
@@ -654,8 +658,8 @@ window.addEventListener('touchmove', handleMove, { passive: true });
 window.addEventListener('click', handleClick);
 window.addEventListener('touchstart', (e) => { handleMove(e); handleClick(e); }, { passive: false });
 
-// --- Skip (double-click) — guarantees identical end state ---
-canvas.addEventListener('dblclick', () => {
+// --- Skip (double-click, homepage only) ---------------------
+if (canvas) canvas.addEventListener('dblclick', () => {
   if (phase >= Phase.IDLE) return;
 
   // 1. Kill meteor + glass
@@ -724,7 +728,9 @@ canvas.addEventListener('dblclick', () => {
 
 // --- Boot ---------------------------------------------------
 function boot() {
-  if (!canvas || !ctx) {
+  // Only run cosmic animation on homepage (where canvas exists)
+  if (!canvas) return;
+  if (!ctx) {
     document.body.innerHTML = '<div style="color:#fff;text-align:center;padding:4rem;"><h1>Jimmy Yang</h1><p>AN AI Engineer</p><nav style="margin-top:2rem;"><a href="about/">个人信息</a> · <a href="projects/">个人项目</a> · <a href="research/">学术研究</a> · <a href="engineering/">工程问题</a> · <a href="notes/">技术小结</a></nav></div>';
     return;
   }
