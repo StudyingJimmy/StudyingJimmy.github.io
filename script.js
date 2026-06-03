@@ -493,79 +493,96 @@ let burstTimer = rand(8, 15);
 let burstActive = 0;      // 0..1, burst intensity
 let colorTemp = 0;        // 0=cold blue, 1=white hot
 
-// Lightning → center: bolts aim toward center area
+// Lightning → center: dense continuous path, no sharp angles
 class Lightning {
-  constructor() {
-    const edge = randInt(0, 3);
-    let sx, sy;
-    // Target center area (within ~200px)
-    const tx = cx + rand(-200, 200);
-    const ty = cy + rand(-150, 150);
-    // Calculate angle from edge toward center target
-    const baseAngle = Math.atan2(ty - (edge === 2 ? H+10 : edge === 0 ? -10 : rand(0,H)),
-                                 tx - (edge === 1 ? W+10 : edge === 3 ? -10 : rand(0,W)));
-    if (edge === 0)      { sx = rand(0, W); sy = -10; }
-    else if (edge === 1) { sx = W + 10; sy = rand(0, H); }
-    else if (edge === 2) { sx = rand(0, W); sy = H + 10; }
-    else                 { sx = -10; sy = rand(0, H); }
-    this.allSegs = [];
-    this.growTree(sx, sy, baseAngle, 0.8, 4);
-    this.life = rand(0.12, 0.28);
+  constructor(fromCenter = false) {
+    const diag = Math.sqrt(W*W + H*H);
+    let sx, sy, targetAngle, totalLen;
+    if (fromCenter) {
+      sx = cx; sy = cy;
+      targetAngle = rand(0, Math.PI * 2);
+      totalLen = rand(80, 280);
+    } else {
+      const edge = randInt(0, 3);
+      if (edge === 0)      { sx = rand(0, W); sy = -10; }
+      else if (edge === 1) { sx = W + 10; sy = rand(0, H); }
+      else if (edge === 2) { sx = rand(0, W); sy = H + 10; }
+      else                 { sx = -10; sy = rand(0, H); }
+      const tx = cx + rand(-200, 200);
+      const ty = cy + rand(-150, 150);
+      targetAngle = Math.atan2(ty - sy, tx - sx);
+      totalLen = Math.sqrt((tx-sx)**2 + (ty-sy)**2);
+    }
+    this.trunk = this.buildPath(sx, sy, targetAngle, totalLen, 180);
+    // Branches from trunk
+    this.branches = [];
+    const bCount = randInt(2, 5);
+    for (let b = 0; b < bCount; b++) {
+      const idx = randInt(15, this.trunk.length - 15);
+      const bp = this.trunk[idx];
+      const ba = targetAngle + (rand(0,1)<0.5?-1:1) * rand(0.6, 1.2);
+      this.branches.push(this.buildPath(bp.x, bp.y, ba, totalLen * rand(0.15, 0.35), 50));
+    }
+    this.life = fromCenter ? rand(0.15, 0.35) : rand(0.12, 0.28);
     this.maxLife = this.life;
     this.alive = true;
-    this.triggeredPulse = false;
+    this.triggeredPulse = !fromCenter;
   }
-  growTree(x, y, angle, length, depth) {
-    if (depth <= 0 || length < 0.05) return;
-    const maxL = Math.max(W, H);
-    const segLen = length * maxL * rand(0.12, 0.22);
-    const steps = randInt(3, 6);
-    let cx = x, cy = y, ca = angle;
+  // Build dense continuous path: ~200 points, max 3-5° turn per step
+  buildPath(x, y, targetAngle, totalLen, steps) {
+    const pts = [{x, y}];
+    const stepLen = totalLen / steps;
+    let cx = x, cy = y, ca = targetAngle;
+    // Target for forward bias
+    const tx = x + Math.cos(targetAngle) * totalLen;
+    const ty = y + Math.sin(targetAngle) * totalLen;
     for (let i = 0; i < steps; i++) {
-      ca += rand(-0.25, 0.25);
-      const nx = cx + Math.cos(ca) * segLen;
-      const ny = cy + Math.sin(ca) * segLen;
-      this.allSegs.push({ x1: cx, y1: cy, x2: nx, y2: ny, trunk: depth >= 3 });
-      cx = nx; cy = ny;
+      // Micro-wiggle: ±0.06 rad ≈ ±3.4° per step
+      ca += rand(-0.06, 0.06);
+      // Forward bias: gently correct toward target (never backtrack)
+      const toTarget = Math.atan2(ty - cy, tx - cx);
+      ca += (toTarget - ca) * 0.08;
+      cx += Math.cos(ca) * stepLen;
+      cy += Math.sin(ca) * stepLen;
+      pts.push({x: cx, y: cy});
     }
-    const branchCount = depth >= 3 ? randInt(1, 3) : randInt(0, 1);
-    for (let b = 0; b < branchCount; b++) {
-      const bt = rand(0.3, 0.7);
-      const bx = x + Math.cos(angle) * segLen * steps * bt;
-      const by = y + Math.sin(angle) * segLen * steps * bt;
-      const side = rand(0, 1) < 0.5 ? -1 : 1;
-      const ba = angle + side * rand(0.7, 1.2);
-      this.growTree(bx, by, ba, length * rand(0.3, 0.6), depth - 1);
-    }
+    return pts;
   }
   update(dt) {
     this.life -= dt;
     if (this.life <= 0) {
       this.alive = false;
-      if (!this.triggeredPulse) { centerPulse = 1.0; this.triggeredPulse = true; }
+      if (this.triggeredPulse) { centerPulse = 1.0; this.triggeredPulse = false; }
     }
   }
   draw(ctx, temp) {
     const a = Math.max(0, this.life / this.maxLife);
-    const trunks = this.allSegs.filter(s => s.trunk);
-    const twigs = this.allSegs.filter(s => !s.trunk);
     const glowCol = temp > 0.5 ? '#ffffff' : '#6699dd';
     const midCol = temp > 0.5 ? '#ffffff' : '#aaddff';
-    ctx.globalAlpha = a * 0.2;
-    ctx.strokeStyle = glowCol;
-    ctx.lineWidth = 6;
-    ctx.lineCap = 'round';
-    this.allSegs.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
-    ctx.globalAlpha = a * 0.45;
-    ctx.strokeStyle = midCol;
-    ctx.lineWidth = 3;
-    trunks.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
-    ctx.lineWidth = 1.5;
-    twigs.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
-    ctx.globalAlpha = a;
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1.2;
-    trunks.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    const drawPath = (pts, lw, col, alpha) => {
+      if (pts.length < 2) return;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+    };
+    // Wide glow
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = glowCol;
+    drawPath(this.trunk, 5, glowCol, a * 0.25);
+    this.branches.forEach(b => drawPath(b, 3, glowCol, a * 0.18));
+    // Medium
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = midCol;
+    drawPath(this.trunk, 2.5, midCol, a * 0.5);
+    this.branches.forEach(b => drawPath(b, 1.5, midCol, a * 0.35));
+    // White core
+    ctx.shadowBlur = 0;
+    drawPath(this.trunk, 1, '#fff', a);
+    this.branches.forEach(b => drawPath(b, 0.6, '#fff', a * 0.7));
   }
 }
 
@@ -761,23 +778,13 @@ function loop(timestamp) {
     burstTimer -= dt;
     if (burstTimer <= 0 && !hoveredNebula) {
       burstActive = 1.0;
-      colorTemp = 1.0; // white hot
+      colorTemp = 1.0;
       const burstCount = randInt(8, 16);
       for (let i = 0; i < burstCount; i++) {
-        const angle = rand(0, Math.PI * 2);
-        const bl = rand(80, 250);
-        const bx = cx + Math.cos(angle) * bl;
-        const by = cy + Math.sin(angle) * bl;
-        const b = new Lightning();
-        // Override: start from center instead of edge
-        b.allSegs = [];
-        b.growTree(cx, cy, angle, rand(0.2, 0.5), 3);
-        b.life = rand(0.15, 0.35);
-        b.maxLife = b.life;
-        bolts.push(b);
+        bolts.push(new Lightning(true)); // fromCenter
       }
       burstTimer = rand(8, 15);
-      if (bolts.length > 12) bolts.splice(0, bolts.length - 12);
+      if (bolts.length > 14) bolts.splice(0, bolts.length - 14);
     }
   } else {
     const sparkle = hoveredNebula ? 1 : 0;
