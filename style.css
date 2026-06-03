@@ -197,21 +197,29 @@ h1, h2, h3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.3rem;
+  width: 2rem;
+  height: 2rem;
   transition: transform 0.25s, color 0.25s;
   color: var(--text-muted);
+}
+.theme-icon-dark, .theme-icon-light {
+  position: absolute;
+  transition: opacity 0.3s ease;
 }
 .theme-toggle:hover {
   transform: scale(1.2);
   color: var(--accent);
 }
-[data-theme="dark"] .theme-icon-light { display: none; }
-[data-theme="light"] .theme-icon-dark { display: none; }
+.theme-icon-dark, .theme-icon-light {
+  transition: opacity 0.3s ease;
+}
+[data-theme="dark"] .theme-icon-light { opacity: 0; pointer-events: none; }
+[data-theme="light"] .theme-icon-dark { opacity: 0; pointer-events: none; }
 
-/* Theme transition overlay — circle expand/contract */
+/* Theme transition — behind content, above body bg */
 #themeTransition {
   position: fixed;
-  z-index: 9999;
+  z-index: 1;
   pointer-events: none;
   border-radius: 50%;
   transform: scale(0);
@@ -221,6 +229,9 @@ h1, h2, h3 {
    SUB-PAGE SHARED STYLES
    ============================================================ */
 .sub-page {
+  position: relative;
+  z-index: 2;
+  background: var(--bg);
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem 1.5rem;

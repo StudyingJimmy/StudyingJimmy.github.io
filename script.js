@@ -24,7 +24,10 @@ window.addEventListener('resize', resize);
 // --- Theme (with circle-expand transition) -------------------
 const html = document.documentElement;
 const themeToggle = document.getElementById('themeToggle');
-function getTheme() { return localStorage.getItem('theme') || 'dark'; }
+function getTheme() {
+  return localStorage.getItem('theme')
+    || (document.body.classList.contains('cosmic') ? 'dark' : 'light');
+}
 function setTheme(t) { html.setAttribute('data-theme', t); localStorage.setItem('theme', t); }
 setTheme(getTheme());
 
@@ -73,6 +76,12 @@ function animateThemeSwitch(fromDark) {
 
   // Switch theme halfway through the animation
   setTimeout(() => setTheme(fromDark ? 'light' : 'dark'), 250);
+
+  // Reset overlay after animation completes
+  setTimeout(() => {
+    el.style.transition = 'none';
+    el.style.transform = 'scale(0)';
+  }, 600);
 }
 
 if (themeToggle) {
