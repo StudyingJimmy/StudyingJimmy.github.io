@@ -12,6 +12,14 @@
     <span class="theme-icon-light">☾</span>
   </button>
 
+  <!-- Fixed header -->
+  <header class="slide-header">
+    <a href="../" class="sub-back">← Home</a>
+    <h2 class="sub-section-title">
+      <span class="sub-section-number">01</span>个人信息
+    </h2>
+  </header>
+
   <!-- Slide dots -->
   <div class="slide-dots" id="slideDots">
     <button class="slide-dot active" data-index="0" aria-label="Slide 1"></button>
@@ -21,15 +29,12 @@
 
   <div class="slide-container" id="slideContainer">
 
-    <!-- Slide 1: Intro -->
+    <!-- Slide 1: 自我介绍 -->
     <section class="slide" id="slide0">
       <div class="slide-inner">
-        <header class="sub-header">
-          <a href="../" class="sub-back">← Home</a>
-          <h2 class="sub-section-title">
-            <span class="sub-section-number">01</span>个人信息
-          </h2>
-        </header>
+        <h2 class="section-title">
+          <span class="section-number">I</span>自我介绍
+        </h2>
         <div class="about-grid">
           <div class="about-text">
             <p>
@@ -65,11 +70,11 @@
       </div>
     </section>
 
-    <!-- Slide 2: Education -->
+    <!-- Slide 2: 教育经历 -->
     <section class="slide" id="slide1">
       <div class="slide-inner">
         <h2 class="section-title">
-          <span class="section-number">I</span>教育经历
+          <span class="section-number">II</span>教育经历
         </h2>
         <div class="timeline">
           <div class="timeline-item current">
@@ -96,11 +101,11 @@
       </div>
     </section>
 
-    <!-- Slide 3: Experience + Resume -->
+    <!-- Slide 3: 实习经历 -->
     <section class="slide" id="slide2">
       <div class="slide-inner">
         <h2 class="section-title">
-          <span class="section-number">II</span>实习经历
+          <span class="section-number">III</span>实习经历
         </h2>
         <div class="timeline">
           <div class="timeline-item">
@@ -141,7 +146,6 @@
 
   <script src="../script.js"></script>
   <script>
-    // Slide navigation
     const container = document.getElementById('slideContainer');
     const slides = container.querySelectorAll('.slide');
     const dots = document.querySelectorAll('.slide-dot');
@@ -153,7 +157,6 @@
       if (index < 0 || index >= slides.length) return;
       slides[index].scrollIntoView({ behavior: 'smooth' });
     }
-
     function updateUI() {
       const rect = container.getBoundingClientRect();
       const mid = rect.top + rect.height / 2;
@@ -169,17 +172,10 @@
         arrowDown.disabled = current === slides.length - 1;
       }
     }
-
     container.addEventListener('scroll', updateUI, { passive: true });
-
     arrowUp.addEventListener('click', () => { if (current > 0) goTo(current - 1); });
     arrowDown.addEventListener('click', () => { if (current < slides.length - 1) goTo(current + 1); });
-
-    dots.forEach(dot => {
-      dot.addEventListener('click', () => goTo(parseInt(dot.dataset.index)));
-    });
-
-    // Keyboard nav
+    dots.forEach(dot => dot.addEventListener('click', () => goTo(parseInt(dot.dataset.index))));
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); if (current < slides.length - 1) goTo(current + 1); }
       if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); if (current > 0) goTo(current - 1); }
