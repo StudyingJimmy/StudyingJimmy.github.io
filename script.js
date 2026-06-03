@@ -295,6 +295,7 @@ class Nebula {
 
   draw(ctx, t) {
     if (!this.hasParticles) return;
+    ctx.globalAlpha = 1; // Reset — prevents bleed from previous draws
     const { cx, cy, radius, hue, sat, light, hovered } = this;
 
     // --- Layer 1: Wide outer halo (very faint, large) ---
@@ -336,6 +337,7 @@ class Nebula {
       p.color = origColor;
     });
 
+    ctx.globalAlpha = 1;
     // --- Layer 5: Core (subtle when idle, bright when hovered) ---
     const coreR = radius * (hovered ? 0.4 : 0.15);
     const coreAlpha = hovered ? 0.9 : 0.2;
