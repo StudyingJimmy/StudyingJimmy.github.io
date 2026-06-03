@@ -77,10 +77,10 @@ class Star {
   constructor() {
     this.x = rand(0, W);
     this.y = rand(0, H);
-    this.baseAlpha = rand(0.2, 0.9);
+    this.baseAlpha = rand(0.4, 1.0);
     this.phase = rand(0, Math.PI * 2);
     this.speed = rand(0.3, 1.5);
-    this.size = rand(0.5, 2);
+    this.size = rand(0.8, 2.5);
   }
   draw(ctx, t) {
     const alpha = this.baseAlpha + Math.sin(t * this.speed + this.phase) * 0.2;
@@ -315,7 +315,7 @@ function initNebulae() {
   repositionNebulae();
 
   // Create label DOM elements
-  labelEls.forEach(el => el.remove());
+  labelEls.forEach(item => { if (item.el && item.el.remove) item.el.remove(); });
   labelEls = [];
   nebulae.forEach(n => {
     const el = document.createElement('a');
@@ -581,6 +581,23 @@ canvas.addEventListener('dblclick', () => {
 });
 
 // --- Boot ---------------------------------------------------
-initStars();
-initNebulae();
-requestAnimationFrame(loop);
+function boot() {
+  if (!canvas || !ctx) {
+    console.error('Canvas not supported');
+    document.body.innerHTML = '<div style="color:#fff;text-align:center;padding:4rem;"><h1>Jimmy Yang</h1><p>AN AI Engineer</p><nav style="margin-top:2rem;"><a href="about/">个人信息</a> · <a href="projects/">个人项目</a> · <a href="research/">学术研究</a> · <a href="engineering/">工程问题</a> · <a href="notes/">技术小结</a></nav></div>';
+    return;
+  }
+  // Hide fallback
+  const fallback = document.getElementById('fallback');
+  if (fallback) fallback.style.display = 'none';
+
+  initStars();
+  initNebulae();
+  requestAnimationFrame(loop);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
