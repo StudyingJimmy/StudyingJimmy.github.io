@@ -424,7 +424,7 @@ function startGather() {
   scatteredParticles.forEach(p => {
     let best = null, bestD = Infinity;
     nebulae.forEach(n => {
-      const d = dist(p, n);
+      const d = dist(p, {x: n.cx, y: n.cy});
       if (d < bestD) { bestD = d; best = n; }
     });
     if (best) {
