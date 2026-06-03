@@ -533,13 +533,16 @@ class Lightning {
     const pts = [{x, y}];
     const stepLen = totalLen / steps;
     let cx = x, cy = y, ca = targetAngle;
-    // Target for forward bias
+    let prevTurn = 0; // track last turn direction to avoid arcs
     const tx = x + Math.cos(targetAngle) * totalLen;
     const ty = y + Math.sin(targetAngle) * totalLen;
     for (let i = 0; i < steps; i++) {
-      // Micro-wiggle: ±0.06 rad ≈ ±3.4° per step
-      ca += rand(-0.06, 0.06);
-      // Forward bias: gently correct toward target (never backtrack)
+      // Alternate turn direction: slight bias opposite to previous turn
+      const bias = -prevTurn * 0.5;
+      const turn = rand(-0.06, 0.06) + bias;
+      ca += turn;
+      prevTurn = turn;
+      // Forward bias: gently correct toward target
       const toTarget = Math.atan2(ty - cy, tx - cx);
       ca += (toTarget - ca) * 0.08;
       cx += Math.cos(ca) * stepLen;
