@@ -656,20 +656,55 @@ window.addEventListener('touchmove', handleMove, { passive: true });
 window.addEventListener('click', handleClick);
 window.addEventListener('touchstart', (e) => { handleMove(e); handleClick(e); }, { passive: false });
 
-// --- Skip (double-click) ------------------------------------
+// --- Skip (double-click) — guarantees identical end state ---
 canvas.addEventListener('dblclick', () => {
-  if (phase < Phase.IDLE) {
-    if (meteor) meteor.alive = false;
-    glassShatter = null;
-    scatteredParticles = [];
-    if (!twActive && !twDone) {
-      typeLines.forEach(l => { l.el.textContent = l.text; l.el.classList.add('visible'); });
-      twDone = true; twActive = false;
-    }
+  if (phase >= Phase.IDLE) return;
+
+  // 1. Kill meteor + glass
+  if (meteor) meteor.alive = false;
+  glassShatter = null;
+
+  // 2. Show all text immediately, clean up typewriter state
+  typeLines.forEach(l => {
+    l.el.textContent = l.text;
+    l.el.classList.add('visible');
+    l.el.classList.remove('typing');
+  });
+  twDone = true;
+  twActive = false;
+
+  // 3. Transfer scattered particles to nebulae (MUST do before clearing)
+  if (scatteredParticles.length > 0) {
     startGather();
-    globalTime = LABELS_SHOW;
-    phase = Phase.IDLE;
   }
+  scatteredParticles = [];
+
+  // 4. Ensure every nebula has particles (in case scatter was empty)
+  nebulae.forEach(n => {
+    if (!n.hasParticles) {
+      for (let i = 0; i < 130; i++) {
+        const p = new Particle(
+          n.cx + rand(-n.radius, n.radius),
+          n.cy + rand(-n.radius, n.radius),
+          0, 0, rand(3, 8),
+          `hsl(${n.hue},${n.sat}%,${rand(n.light - 15, n.light + 15)}%)`,
+          rand(1, 3.5));
+        p.orbitAngle = rand(0, Math.PI * 2);
+        p.orbitRadius = rand(10, n.radius);
+        p.orbitSpeed = rand(0.3, 0.9);
+        p.gravitating = false;
+        p.nebula = n;
+        n.particles.push(p);
+      }
+      n.hasParticles = true;
+    }
+  });
+
+  // 5. Show labels immediately
+  showLabels();
+
+  // 6. Enter idle
+  phase = Phase.IDLE;
 });
 
 // --- Boot ---------------------------------------------------
