@@ -152,58 +152,79 @@ class Meteor {
   }
 }
 
-// --- Glass Shatter ------------------------------------------
+// --- Glass Shatter (full-screen crack) ----------------------
 class GlassShatter {
   constructor(x, y) {
     this.x = x; this.y = y;
-    this.lines = [];
-    const count = 70;
+    this.cracks = [];
+    const count = 130;
+    const diag = Math.sqrt(W*W + H*H);
     for (let i = 0; i < count; i++) {
       const angle = rand(0, Math.PI * 2);
-      this.lines.push({
+      // Primary cracks reach across the entire screen
+      const isPrimary = i < 25;
+      this.cracks.push({
         angle,
-        len: rand(80, Math.min(W, H) * 0.85),
-        cx: x + rand(-50, 50),
-        cy: y + rand(-50, 50),
-        life: rand(0.3, 0.8),
-        maxLife: rand(0.3, 0.8),
-        width: rand(0.5, 2.5),
+        len: isPrimary ? rand(diag * 0.4, diag * 0.7) : rand(60, diag * 0.45),
+        cx: x + rand(-60, 60),
+        cy: y + rand(-60, 60),
+        life: rand(0.4, 0.9),
+        maxLife: rand(0.4, 0.9),
+        width: isPrimary ? rand(2, 5) : rand(0.8, 2.5),
+        branches: isPrimary ? randInt(1, 3) : randInt(0, 1),
       });
     }
+    // Shockwave ring
+    this.ringRadius = 0;
+    this.ringMax = diag * 0.7;
     this.flashAlpha = 1.0;
     this.alive = true;
     this.elapsed = 0;
   }
   update(dt) {
     this.elapsed += dt;
-    this.flashAlpha = Math.max(0, 1 - this.elapsed / 0.15);
-    this.lines.forEach(l => l.life -= dt);
-    if (this.elapsed > 0.55) this.alive = false;
+    this.flashAlpha = Math.max(0, 1 - this.elapsed / 0.12);
+    this.ringRadius += dt * Math.max(W, H) * 1.6;
+    this.cracks.forEach(c => c.life -= dt);
+    if (this.elapsed > 0.8) this.alive = false;
   }
   draw(ctx) {
+    // White flash
     if (this.flashAlpha > 0) {
-      ctx.globalAlpha = this.flashAlpha * 0.6;
+      ctx.globalAlpha = this.flashAlpha * 0.75;
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, W, H);
     }
-    this.lines.forEach(l => {
-      if (l.life <= 0) return;
-      const a = Math.max(0, l.life / l.maxLife);
-      ctx.globalAlpha = a;
+    // Shockwave ring
+    if (this.ringRadius < this.ringMax) {
+      ctx.globalAlpha = Math.max(0, 0.5 - this.elapsed / 0.6);
       ctx.strokeStyle = '#fff';
-      ctx.lineWidth = l.width * a;
+      ctx.lineWidth = 4 * (1 - this.elapsed / 0.8);
       ctx.beginPath();
-      ctx.moveTo(l.cx, l.cy);
-      const ex = l.cx + Math.cos(l.angle) * l.len;
-      const ey = l.cy + Math.sin(l.angle) * l.len;
+      ctx.arc(this.x, this.y, this.ringRadius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // Cracks
+    this.cracks.forEach(c => {
+      if (c.life <= 0) return;
+      const a = Math.max(0, c.life / c.maxLife);
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = c.width * a;
+      ctx.beginPath();
+      ctx.moveTo(c.cx, c.cy);
+      const ex = c.cx + Math.cos(c.angle) * c.len;
+      const ey = c.cy + Math.sin(c.angle) * c.len;
       ctx.lineTo(ex, ey);
-      if (l.len > 100) {
-        const mx = l.cx + Math.cos(l.angle) * l.len * 0.5;
-        const my = l.cy + Math.sin(l.angle) * l.len * 0.5;
+      // Branch cracks
+      for (let b = 0; b < c.branches; b++) {
+        const t = 0.3 + rand(0, 0.5);
+        const mx = c.cx + Math.cos(c.angle) * c.len * t;
+        const my = c.cy + Math.sin(c.angle) * c.len * t;
+        const ba = c.angle + rand(-0.9, 0.9);
+        const bl = c.len * rand(0.15, 0.35);
         ctx.moveTo(mx, my);
-        ctx.lineTo(mx + Math.cos(l.angle + 0.6) * l.len * 0.25, my + Math.sin(l.angle + 0.6) * l.len * 0.25);
-        ctx.moveTo(mx, my);
-        ctx.lineTo(mx + Math.cos(l.angle - 0.5) * l.len * 0.2, my + Math.sin(l.angle - 0.5) * l.len * 0.2);
+        ctx.lineTo(mx + Math.cos(ba) * bl, my + Math.sin(ba) * bl);
       }
       ctx.stroke();
     });
