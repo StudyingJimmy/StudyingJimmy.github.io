@@ -148,18 +148,24 @@ h1, h2, h3 {
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.8s ease, text-shadow 0.4s ease;
-  font-family: Consolas, 'Courier New', monospace;
-  font-size: 0.85rem;
-  color: var(--text-primary);
-  letter-spacing: 0.06em;
+  font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.08em;
   text-align: center;
   white-space: nowrap;
-  padding: 0.5rem 1rem;
+  text-shadow: 0 0 12px rgba(255,255,255,0.5), 0 0 30px rgba(255,255,255,0.2);
+  padding: 0.4rem 1rem;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(4px);
 }
-.nebula-label.visible { opacity: 0.85; }
+.nebula-label.visible { opacity: 0.9; }
 .nebula-label:hover {
   opacity: 1;
-  text-shadow: 0 0 18px currentColor, 0 0 36px currentColor;
+  text-shadow: 0 0 20px #fff, 0 0 40px currentColor;
+  background: rgba(0,0,0,0.5);
 }
 
 /* Screen Shake */
