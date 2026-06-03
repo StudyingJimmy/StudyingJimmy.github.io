@@ -3,299 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Jimmy Yang — AI Test Development Engineer. Building quality into AI systems.">
-  <title>Jimmy Yang · AI Test Engineer</title>
+  <meta name="description" content="Jimmy Yang — AI Engineer. Building quality into intelligent systems.">
+  <title>Jimmy Yang</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Theme Toggle -->
   <button class="theme-toggle" aria-label="Toggle theme" id="themeToggle">
     <span class="theme-icon-dark">☀</span>
     <span class="theme-icon-light">☾</span>
   </button>
 
-  <!-- Navigation Dots -->
-  <nav class="nav-dots" id="navDots">
-    <a href="#hero" class="nav-dot active" data-section="hero" aria-label="Home"></a>
-    <a href="#about" class="nav-dot" data-section="about" aria-label="About"></a>
-    <a href="#experience" class="nav-dot" data-section="experience" aria-label="Experience"></a>
-    <a href="#skills" class="nav-dot" data-section="skills" aria-label="Skills"></a>
-    <a href="#education" class="nav-dot" data-section="education" aria-label="Education"></a>
-    <a href="#projects" class="nav-dot" data-section="projects" aria-label="Projects"></a>
-    <a href="#contact" class="nav-dot" data-section="contact" aria-label="Contact"></a>
-  </nav>
-
-  <main>
-    <!-- Hero -->
-    <section id="hero" class="hero">
-      <div class="hero-bg"></div>
-      <div class="hero-content">
-        <p class="hero-greeting">Hello, I'm</p>
-        <h1 class="hero-name">Jimmy Yang</h1>
-        <div class="hero-title-wrapper">
-          <span class="hero-bracket">{</span>
-          <h2 class="hero-title">AI Test Development Engineer</h2>
-          <span class="hero-bracket">}</span>
-        </div>
-        <p class="hero-tagline">
-          Building quality into AI systems.<br>
-          <span class="hero-tagline-cn">让每一行代码都经得起考验。</span>
-        </p>
-        <div class="hero-cta">
-          <a href="#contact" class="btn-primary">Get in Touch</a>
-          <a href="#experience" class="btn-secondary">View My Work ↓</a>
-        </div>
+  <main class="hub">
+    <div class="hub-bg"></div>
+    <div class="hub-content">
+      <p class="hub-greeting">Hello, I'm</p>
+      <h1 class="hub-name">Jimmy Yang</h1>
+      <div class="hub-title-wrap">
+        <span class="hub-bracket">{</span>
+        <p class="hub-title">AI Engineer</p>
+        <span class="hub-bracket">}</span>
       </div>
-    </section>
+      <p class="hub-tagline">将质量意识注入智能系统。</p>
 
-    <!-- About -->
-    <section id="about" class="about">
-      <div class="section-container">
-        <h2 class="section-title">
-          <span class="section-number">01</span>
-          About
-        </h2>
-        <div class="about-grid">
-          <div class="about-text">
-            <p>
-              我是一名 <strong>AI 测试开发工程师</strong>，目前就职于波克城市，
-              专注于大模型驱动的测试自动化和智能体工作流。
-            </p>
-            <p>
-              我的工作横跨<em>大语言模型</em>与<em>软件质量保障</em>的交汇地带 —
-              从基于 LLM 的测试用例生成，到 Playwright 端到端自动化测试，
-              再到 CI/CD 流水线的质量门禁搭建。
-            </p>
-            <p>
-              硕士期间研究多模态大语言模型的视觉问答，发表 SCI 论文 2 篇。
-              我相信 AI 不仅是被测试的对象，更是提升测试效率的利器。
-            </p>
-          </div>
-          <div class="about-stats">
-            <div class="stat">
-              <span class="stat-number">2+</span>
-              <span class="stat-label">Years Experience</span>
-            </div>
-            <div class="stat">
-              <span class="stat-number">2</span>
-              <span class="stat-label">SCI Papers</span>
-            </div>
-            <div class="stat">
-              <span class="stat-number">CET-6</span>
-              <span class="stat-label">564 Score</span>
-            </div>
-            <div class="stat">
-              <span class="stat-number">1</span>
-              <span class="stat-label">National Award</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+      <nav class="hub-nav">
+        <a href="about/" class="hub-card">
+          <span class="hub-card-icon">👤</span>
+          <span class="hub-card-title">个人介绍</span>
+          <span class="hub-card-desc">教育背景、实习经历与荣誉</span>
+        </a>
+        <a href="projects/" class="hub-card">
+          <span class="hub-card-icon">📂</span>
+          <span class="hub-card-title">个人项目</span>
+          <span class="hub-card-desc">Coming Soon</span>
+        </a>
+        <a href="research/" class="hub-card">
+          <span class="hub-card-icon">📚</span>
+          <span class="hub-card-title">学术研究</span>
+          <span class="hub-card-desc">硕士期间对 AI 技术栈的理解与思考</span>
+        </a>
+        <a href="engineering/" class="hub-card">
+          <span class="hub-card-icon">🔍</span>
+          <span class="hub-card-title">工程问题</span>
+          <span class="hub-card-desc">按岗位分类的业界问题调研</span>
+        </a>
+        <a href="notes/" class="hub-card">
+          <span class="hub-card-icon">📝</span>
+          <span class="hub-card-title">技术小结</span>
+          <span class="hub-card-desc">实践精炼的技术方案与复盘</span>
+        </a>
+      </nav>
 
-    <!-- Experience -->
-    <section id="experience" class="experience">
-      <div class="section-container">
-        <h2 class="section-title">
-          <span class="section-number">02</span>
-          Experience
-        </h2>
-        <div class="timeline">
-          <div class="timeline-item current">
-            <div class="timeline-marker"></div>
-            <div class="timeline-content">
-              <div class="timeline-tag current">Current</div>
-              <h3>AI 测试开发工程师</h3>
-              <p class="timeline-org">波克城市 (Boke City) · 游戏</p>
-              <p class="timeline-date">2026.07 — Present</p>
-              <p class="timeline-desc">
-                负责游戏项目中 AI 驱动的质量保障体系建设，包括智能测试用例生成、
-                自动化回归测试框架搭建，以及 CI/CD 流水线中的质量门禁策略。
-              </p>
-            </div>
-          </div>
-          <div class="timeline-item">
-            <div class="timeline-marker"></div>
-            <div class="timeline-content">
-              <div class="timeline-tag">Internship</div>
-              <h3>大模型测试开发实习生</h3>
-              <p class="timeline-org">字节跳动 · 蜜柚网络科技</p>
-              <p class="timeline-date">2025.11 — 2026.02</p>
-              <p class="timeline-desc">
-                基于 LLM 定制智能体工作流，自动生成高质量测试用例，
-                显著提升测试覆盖率；参与大模型产品测试框架的设计与迭代。
-              </p>
-            </div>
-          </div>
-        </div>
+      <div class="hub-actions">
+        <a href="assets/pdf/future_resume_business.pdf" class="btn-resume" download>
+          <span>📄</span> 招聘 · 获取简历
+        </a>
       </div>
-    </section>
-
-    <!-- Skills -->
-    <section id="skills" class="skills">
-      <div class="section-container">
-        <h2 class="section-title">
-          <span class="section-number">03</span>
-          Skills
-        </h2>
-        <div class="skills-grid">
-          <div class="skill-category">
-            <h3 class="skill-cat-title">
-              <span class="skill-icon">&#x25C9;</span> AI / LLM
-            </h3>
-            <div class="skill-tags">
-              <span class="skill-tag">LLM 测试</span>
-              <span class="skill-tag">智能体工作流</span>
-              <span class="skill-tag">Prompt Engineering</span>
-              <span class="skill-tag">RAG</span>
-              <span class="skill-tag">多模态 VQA</span>
-              <span class="skill-tag">LangChain</span>
-            </div>
-          </div>
-          <div class="skill-category">
-            <h3 class="skill-cat-title">
-              <span class="skill-icon">&#x25C9;</span> Test Automation
-            </h3>
-            <div class="skill-tags">
-              <span class="skill-tag">Playwright</span>
-              <span class="skill-tag">E2E Testing</span>
-              <span class="skill-tag">测试用例生成</span>
-              <span class="skill-tag">Pytest</span>
-              <span class="skill-tag">API Testing</span>
-              <span class="skill-tag">覆盖率分析</span>
-            </div>
-          </div>
-          <div class="skill-category">
-            <h3 class="skill-cat-title">
-              <span class="skill-icon">&#x25C9;</span> DevOps & CI/CD
-            </h3>
-            <div class="skill-tags">
-              <span class="skill-tag">GitHub Actions</span>
-              <span class="skill-tag">Docker</span>
-              <span class="skill-tag">Git</span>
-              <span class="skill-tag">Linux</span>
-              <span class="skill-tag">Prometheus</span>
-              <span class="skill-tag">质量门禁</span>
-            </div>
-          </div>
-          <div class="skill-category">
-            <h3 class="skill-cat-title">
-              <span class="skill-icon">&#x25C9;</span> Languages & Tools
-            </h3>
-            <div class="skill-tags">
-              <span class="skill-tag">Python</span>
-              <span class="skill-tag">SQL</span>
-              <span class="skill-tag">Shell</span>
-              <span class="skill-tag">HTML/CSS/JS</span>
-              <span class="skill-tag">PyTorch</span>
-              <span class="skill-tag">Pandas/NumPy</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Education -->
-    <section id="education" class="education">
-      <div class="section-container">
-        <h2 class="section-title">
-          <span class="section-number">04</span>
-          Education
-        </h2>
-        <div class="edu-list">
-          <div class="edu-item">
-            <div class="edu-year">2023 — 2026</div>
-            <div class="edu-detail">
-              <h3>上海大学 · 人工智能 硕士</h3>
-              <p>研究方向：多模态大语言模型视觉问答（Training-free）</p>
-              <p class="edu-honor">
-                <span class="honor-badge">🏆</span>
-                "华为杯"第21届中国研究生数学建模竞赛 国家二等奖
-              </p>
-              <p class="edu-honor">
-                <span class="honor-badge">📄</span>
-                SCI 论文 × 2（多模态 LLM 视觉问答方向，对 Attention 机制有深入研究）
-              </p>
-            </div>
-          </div>
-          <div class="edu-item">
-            <div class="edu-year">2019 — 2023</div>
-            <div class="edu-detail">
-              <h3>中国石油大学（华东）· 数据科学与大数据技术 学士</h3>
-              <p>偏数学应用统计方向，主修 Python 数据分析与机器学习</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Projects (placeholder — will grow with Jobin) -->
-    <section id="projects" class="projects">
-      <div class="section-container">
-        <h2 class="section-title">
-          <span class="section-number">05</span>
-          Projects
-        </h2>
-        <div class="project-grid">
-          <a href="https://github.com/StudyingJimmy/Jobin" class="project-card" target="_blank" rel="noopener">
-            <div class="project-top">
-              <span class="project-icon">📦</span>
-              <span class="project-arrow">↗</span>
-            </div>
-            <h3>Jobin — AI Test Learning Hub</h3>
-            <p>面向 AI 测试开发工程师的系统性学习与项目实践仓库。
-              覆盖 Playwright E2E、LLM 智能体测试、CI/CD 质量门禁等方向。</p>
-            <div class="project-tags">
-              <span>Playwright</span><span>LLM</span><span>CI/CD</span><span>GitHub Actions</span>
-            </div>
-          </a>
-          <div class="project-card placeholder">
-            <div class="project-top">
-              <span class="project-icon">🔜</span>
-            </div>
-            <h3>More Coming Soon</h3>
-            <p>更多项目正在建设中 — AI 测试框架、智能体工作流演示、自动化测试平台...</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Contact -->
-    <section id="contact" class="contact">
-      <div class="section-container">
-        <h2 class="section-title">
-          <span class="section-number">06</span>
-          Contact
-        </h2>
-        <div class="contact-content">
-          <p class="contact-intro">
-            如果你对我的工作感兴趣，或者想聊聊 AI 测试、技术合作，欢迎联系我。
-          </p>
-          <div class="contact-links">
-            <a href="mailto:betteryoungai@gmail.com" class="contact-link">
-              <span class="contact-icon">✉</span>
-              <span>betteryoungai@gmail.com</span>
-            </a>
-            <a href="https://github.com/StudyingJimmy" class="contact-link" target="_blank" rel="noopener">
-              <span class="contact-icon">⌘</span>
-              <span>github.com/StudyingJimmy</span>
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Footer -->
-    <footer>
-      <div class="footer-content">
-        <p class="footer-name">Jimmy Yang</p>
-        <p class="footer-tagline">Job, In. — 让工作跳进口袋</p>
-        <p class="footer-copy">© 2026 Built with care. Deployed on GitHub Pages.</p>
-      </div>
-    </footer>
+    </div>
   </main>
 
   <script src="script.js"></script>
