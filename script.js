@@ -230,6 +230,17 @@ class Nebula {
     this.orbitOffset = (Math.PI * 2 / NEBULA_COUNT) * index;
     this.hovered = false;
     this.hasParticles = false;
+    // Pre-compute gas cloud offsets (static — avoids per-frame flicker)
+    this.gasBlobs = [];
+    for (let i = 0; i < 5; i++) {
+      this.gasBlobs.push({
+        dx: rand(-0.3, 0.3),
+        dy: rand(-0.3, 0.3),
+        s: rand(0.4, 0.7),
+        a: rand(0.03, 0.08),
+        hueShift: rand(-12, 12),
+      });
+    }
   }
 
   getOrbitPos(t) {
@@ -282,35 +293,66 @@ class Nebula {
 
   draw(ctx, t) {
     if (!this.hasParticles) return;
-    const glowAlpha = this.hovered ? 0.35 : 0.1;
-    const glowR = this.hovered ? this.radius * 2.5 : this.radius * 1.6;
-    const glow = ctx.createRadialGradient(this.cx, this.cy, 0, this.cx, this.cy, glowR);
-    glow.addColorStop(0, `hsla(${this.hue},${this.sat}%,${this.light}%,${glowAlpha})`);
-    glow.addColorStop(0.5, `hsla(${this.hue},${this.sat}%,${this.light}%,${glowAlpha * 0.4})`);
-    glow.addColorStop(1, 'transparent');
-    ctx.globalAlpha = 0.7;
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(this.cx, this.cy, glowR, 0, Math.PI * 2);
-    ctx.fill();
+    const { cx, cy, radius, hue, sat, light, hovered } = this;
 
+    // --- Layer 1: Wide outer halo (very faint, large) ---
+    const outerR = radius * 2.2;
+    const g1 = ctx.createRadialGradient(cx, cy, radius * 0.3, cx, cy, outerR);
+    g1.addColorStop(0, `hsla(${hue},${sat}%,${light}%,0.06)`);
+    g1.addColorStop(0.5, `hsla(${hue},${sat}%,${light}%,0.03)`);
+    g1.addColorStop(1, 'transparent');
+    ctx.fillStyle = g1;
+    ctx.beginPath(); ctx.arc(cx, cy, outerR, 0, Math.PI * 2); ctx.fill();
+
+    // --- Layer 2: Irregular gas clouds (pre-computed offsets) ---
+    const gasR = radius * 1.3;
+    this.gasBlobs.forEach(o => {
+      const ox = cx + o.dx * radius;
+      const oy = cy + o.dy * radius;
+      const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, gasR * o.s);
+      g.addColorStop(0, `hsla(${hue + o.hueShift},${sat}%,${light}%,${o.a})`);
+      g.addColorStop(0.6, `hsla(${hue + o.hueShift},${sat}%,${light-10}%,${o.a * 0.3})`);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(ox, oy, gasR * o.s, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // --- Layer 3: Inner glow ---
+    const innerR = radius * 0.9;
+    const g3 = ctx.createRadialGradient(cx, cy, 0, cx, cy, innerR);
+    g3.addColorStop(0, `hsla(${hue},${sat}%,${Math.min(100, light + 10)}%,0.18)`);
+    g3.addColorStop(0.4, `hsla(${hue},${sat}%,${light}%,0.1)`);
+    g3.addColorStop(1, 'transparent');
+    ctx.fillStyle = g3;
+    ctx.beginPath(); ctx.arc(cx, cy, innerR, 0, Math.PI * 2); ctx.fill();
+
+    // --- Layer 4: Dense particle dust ---
     this.particles.forEach(p => {
       const origColor = p.color;
-      if (this.hovered) p.color = `hsla(${this.hue},${this.sat}%,${Math.min(100, this.light + 20)}%,1)`;
+      if (hovered) p.color = `hsla(${hue},${sat}%,${Math.min(100, light + 20)}%,1)`;
       p.draw(ctx);
       p.color = origColor;
     });
 
-    if (this.hovered) {
-      const spark = ctx.createRadialGradient(this.cx, this.cy, 0, this.cx, this.cy, this.radius * 0.6);
-      spark.addColorStop(0, '#fff');
-      spark.addColorStop(0.3, `hsla(${this.hue},${this.sat}%,${this.light + 20}%,0.6)`);
-      spark.addColorStop(1, 'transparent');
-      ctx.globalAlpha = 0.9;
-      ctx.fillStyle = spark;
-      ctx.beginPath();
-      ctx.arc(this.cx, this.cy, this.radius * 0.6, 0, Math.PI * 2);
-      ctx.fill();
+    // --- Layer 5: Bright star-like core ---
+    const coreR = radius * 0.25;
+    const g5 = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
+    g5.addColorStop(0, '#fff');
+    g5.addColorStop(0.15, `hsla(${hue},40%,90%,0.9)`);
+    g5.addColorStop(0.5, `hsla(${hue},${sat}%,${light}%,0.3)`);
+    g5.addColorStop(1, 'transparent');
+    ctx.fillStyle = g5;
+    ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, Math.PI * 2); ctx.fill();
+
+    // --- Hover: extra intense core ---
+    if (hovered) {
+      const sparkR = radius * 0.5;
+      const gs = ctx.createRadialGradient(cx, cy, 0, cx, cy, sparkR);
+      gs.addColorStop(0, '#fff');
+      gs.addColorStop(0.2, `hsla(${hue},${sat}%,${light + 25}%,0.8)`);
+      gs.addColorStop(1, 'transparent');
+      ctx.fillStyle = gs;
+      ctx.beginPath(); ctx.arc(cx, cy, sparkR, 0, Math.PI * 2); ctx.fill();
     }
   }
 
@@ -378,16 +420,16 @@ function triggerShake() {
 // --- Colorful Scatter (only appears AFTER meteor impact) ----
 function createColorfulScatter(x, y) {
   const hues = [35, 195, 270, 170, 340, 15, 50, 220, 300, 160];
-  const count = 340;
+  const count = 520;
   for (let i = 0; i < count; i++) {
     const angle = rand(0, Math.PI * 2);
     const speed = rand(60, 560);
     const hue = hues[randInt(0, hues.length - 1)];
     scatteredParticles.push(new Particle(x, y,
       Math.cos(angle) * speed, Math.sin(angle) * speed,
-      rand(1.5, 4.5),
+      rand(1.5, 5.5),
       `hsl(${hue},${rand(60, 100)}%,${rand(40, 70)}%)`,
-      rand(1.5, 5)));
+      rand(1, 3.5)));
   }
 }
 
