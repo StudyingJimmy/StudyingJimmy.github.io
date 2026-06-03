@@ -459,78 +459,73 @@ let hoveredNebula = null;
 let mx = 0, my = 0;     // raw mouse position
 let pmx = 0, pmy = 0;   // smoothed parallax offset
 
-// --- Lightning bolt (realistic branching, never closed) -----
+// --- Lightning bolt (tree-like, smooth curves, no sharp angles)
 class Lightning {
   constructor() {
-    // Start from random edge point
+    // Start from random edge
     const edge = randInt(0, 3);
-    let sx, sy;
-    if (edge === 0)      { sx = rand(0, W); sy = -10; }
-    else if (edge === 1) { sx = W + 10; sy = rand(0, H); }
-    else if (edge === 2) { sx = rand(0, W); sy = H + 10; }
-    else                 { sx = -10; sy = rand(0, H); }
-    // Target: toward center area
-    const tx = cx + rand(-250, 250);
-    const ty = cy + rand(-200, 200);
-    // Build main trunk + branches (no closed loops)
-    this.trunk = this.buildTrunk(sx, sy, tx, ty, 6);
-    this.branches = [];
-    // Add side branches from random points on trunk
-    const bcount = randInt(1, 4);
-    for (let i = 0; i < bcount; i++) {
-      const seg = this.trunk[randInt(0, this.trunk.length - 1)];
-      const bx = (seg.x1 + seg.x2) / 2;
-      const by = (seg.y1 + seg.y2) / 2;
-      const ba = Math.atan2(seg.y2 - seg.y1, seg.x2 - seg.x1) + rand(-1.2, 1.2);
-      const bl = rand(20, 120);
-      const branch = this.buildTrunk(bx, by, bx + Math.cos(ba) * bl, by + Math.sin(ba) * bl, 3);
-      this.branches.push(...branch);
-    }
-    this.life = rand(0.1, 0.25);
+    let sx, sy, baseAngle;
+    if (edge === 0)      { sx = rand(0, W); sy = -10; baseAngle = Math.PI * 0.5; }
+    else if (edge === 1) { sx = W + 10; sy = rand(0, H); baseAngle = Math.PI; }
+    else if (edge === 2) { sx = rand(0, W); sy = H + 10; baseAngle = -Math.PI * 0.5; }
+    else                 { sx = -10; sy = rand(0, H); baseAngle = 0; }
+    // Grow tree-like structure from root
+    this.allSegs = [];
+    this.growTree(sx, sy, baseAngle, 0.8, 4); // trunk
+    this.life = rand(0.12, 0.28);
     this.maxLife = this.life;
     this.alive = true;
   }
-  // Build a non-looping zigzag path from (x1,y1) to (x2,y2)
-  buildTrunk(x1, y1, x2, y2, depth) {
-    const segs = [];
-    let cx = x1, cy = y1;
-    const steps = depth * 2 + 2;
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-      const tx = x1 + (x2 - x1) * t;
-      const ty = y1 + (y2 - y1) * t;
-      // Perpendicular displacement that's zero at start/end
-      const disp = Math.sin(t * Math.PI) * rand(-1, 1) * 70 * (depth / 6);
-      const dx = tx - x1, dy = ty - y1;
-      const len = Math.sqrt(dx*dx + dy*dy) || 1;
-      const px = -dy / len, py = dx / len; // perpendicular
-      const nx = tx + px * disp;
-      const ny = ty + py * disp;
-      segs.push({ x1: cx, y1: cy, x2: nx, y2: ny });
+  // Recursively grow curvy branches (no angles < ~100° between segments)
+  growTree(x, y, angle, length, depth) {
+    if (depth <= 0 || length < 0.05) return;
+    const maxL = Math.max(W, H);
+    const segLen = length * maxL * rand(0.12, 0.22);
+    const steps = randInt(3, 6);
+    let cx = x, cy = y, ca = angle;
+    for (let i = 0; i < steps; i++) {
+      // Gentle curve: small angle change per step (max ~30° total)
+      ca += rand(-0.25, 0.25); // ±~14° per step — never sharp
+      const nx = cx + Math.cos(ca) * segLen;
+      const ny = cy + Math.sin(ca) * segLen;
+      this.allSegs.push({ x1: cx, y1: cy, x2: nx, y2: ny, trunk: depth >= 3 });
       cx = nx; cy = ny;
     }
-    return segs;
+    // Branch off with gentle angles (40-70° from parent direction)
+    const branchCount = depth >= 3 ? randInt(1, 3) : randInt(0, 1);
+    for (let b = 0; b < branchCount; b++) {
+      const bt = rand(0.3, 0.7); // branch point along the path
+      const bx = x + Math.cos(angle) * segLen * steps * bt;
+      const by = y + Math.sin(angle) * segLen * steps * bt;
+      // Branch angle: gently split off (40-70°), alternating sides
+      const side = rand(0, 1) < 0.5 ? -1 : 1;
+      const ba = angle + side * rand(0.7, 1.2); // ~40-70°
+      this.growTree(bx, by, ba, length * rand(0.3, 0.6), depth - 1);
+    }
   }
   update(dt) { this.life -= dt; if (this.life <= 0) this.alive = false; }
   draw(ctx) {
     const a = Math.max(0, this.life / this.maxLife);
-    const allSegs = [...this.trunk, ...this.branches];
-    // Wide glow
-    ctx.globalAlpha = a * 0.25;
-    ctx.strokeStyle = '#88bbff';
-    ctx.lineWidth = 5;
-    allSegs.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
-    // Medium glow
-    ctx.globalAlpha = a * 0.5;
-    ctx.strokeStyle = '#cceeff';
-    ctx.lineWidth = 2.5;
-    this.trunk.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
-    this.branches.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
-    // White core (trunk only, brighter)
+    const trunks = this.allSegs.filter(s => s.trunk);
+    const twigs = this.allSegs.filter(s => !s.trunk);
+    // Wide glow (all)
+    ctx.globalAlpha = a * 0.2;
+    ctx.strokeStyle = '#6699dd';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    this.allSegs.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    // Medium glow (trunk)
+    ctx.globalAlpha = a * 0.45;
+    ctx.strokeStyle = '#aaddff';
+    ctx.lineWidth = 3;
+    trunks.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    ctx.lineWidth = 1.5;
+    twigs.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    // White core
     ctx.globalAlpha = a;
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 1.2;
-    this.trunk.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    trunks.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
   }
 }
 
