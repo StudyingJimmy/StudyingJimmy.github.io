@@ -459,45 +459,78 @@ let hoveredNebula = null;
 let mx = 0, my = 0;     // raw mouse position
 let pmx = 0, pmy = 0;   // smoothed parallax offset
 
-// --- Lightning bolt (warp tunnel ambient FX) ----------------
+// --- Lightning bolt (realistic branching, never closed) -----
 class Lightning {
   constructor() {
-    // Start from random edge
+    // Start from random edge point
     const edge = randInt(0, 3);
-    if (edge === 0)      { this.sx = rand(0, W); this.sy = 0; }
-    else if (edge === 1) { this.sx = W; this.sy = rand(0, H); }
-    else if (edge === 2) { this.sx = rand(0, W); this.sy = H; }
-    else                 { this.sx = 0; this.sy = rand(0, H); }
-    // Target: random point toward center area
-    this.tx = cx + rand(-200, 200);
-    this.ty = cy + rand(-150, 150);
-    this.segments = this.generate(this.sx, this.sy, this.tx, this.ty, 5);
-    this.life = rand(0.08, 0.2);
+    let sx, sy;
+    if (edge === 0)      { sx = rand(0, W); sy = -10; }
+    else if (edge === 1) { sx = W + 10; sy = rand(0, H); }
+    else if (edge === 2) { sx = rand(0, W); sy = H + 10; }
+    else                 { sx = -10; sy = rand(0, H); }
+    // Target: toward center area
+    const tx = cx + rand(-250, 250);
+    const ty = cy + rand(-200, 200);
+    // Build main trunk + branches (no closed loops)
+    this.trunk = this.buildTrunk(sx, sy, tx, ty, 6);
+    this.branches = [];
+    // Add side branches from random points on trunk
+    const bcount = randInt(1, 4);
+    for (let i = 0; i < bcount; i++) {
+      const seg = this.trunk[randInt(0, this.trunk.length - 1)];
+      const bx = (seg.x1 + seg.x2) / 2;
+      const by = (seg.y1 + seg.y2) / 2;
+      const ba = Math.atan2(seg.y2 - seg.y1, seg.x2 - seg.x1) + rand(-1.2, 1.2);
+      const bl = rand(20, 120);
+      const branch = this.buildTrunk(bx, by, bx + Math.cos(ba) * bl, by + Math.sin(ba) * bl, 3);
+      this.branches.push(...branch);
+    }
+    this.life = rand(0.1, 0.25);
     this.maxLife = this.life;
     this.alive = true;
   }
-  generate(x1, y1, x2, y2, depth) {
-    if (depth <= 0) return [{ x1, y1, x2, y2 }];
-    const mx = (x1 + x2) / 2 + rand(-60, 60) * depth;
-    const my = (y1 + y2) / 2 + rand(-60, 60) * depth;
-    return [
-      ...this.generate(x1, y1, mx, my, depth - 1),
-      ...this.generate(mx, my, x2, y2, depth - 1),
-    ];
+  // Build a non-looping zigzag path from (x1,y1) to (x2,y2)
+  buildTrunk(x1, y1, x2, y2, depth) {
+    const segs = [];
+    let cx = x1, cy = y1;
+    const steps = depth * 2 + 2;
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const tx = x1 + (x2 - x1) * t;
+      const ty = y1 + (y2 - y1) * t;
+      // Perpendicular displacement that's zero at start/end
+      const disp = Math.sin(t * Math.PI) * rand(-1, 1) * 70 * (depth / 6);
+      const dx = tx - x1, dy = ty - y1;
+      const len = Math.sqrt(dx*dx + dy*dy) || 1;
+      const px = -dy / len, py = dx / len; // perpendicular
+      const nx = tx + px * disp;
+      const ny = ty + py * disp;
+      segs.push({ x1: cx, y1: cy, x2: nx, y2: ny });
+      cx = nx; cy = ny;
+    }
+    return segs;
   }
   update(dt) { this.life -= dt; if (this.life <= 0) this.alive = false; }
   draw(ctx) {
     const a = Math.max(0, this.life / this.maxLife);
-    // Glow layer
-    ctx.globalAlpha = a * 0.3;
-    ctx.strokeStyle = '#aaccff';
-    ctx.lineWidth = 4;
-    this.segments.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
-    // Core layer
+    const allSegs = [...this.trunk, ...this.branches];
+    // Wide glow
+    ctx.globalAlpha = a * 0.25;
+    ctx.strokeStyle = '#88bbff';
+    ctx.lineWidth = 5;
+    allSegs.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    // Medium glow
+    ctx.globalAlpha = a * 0.5;
+    ctx.strokeStyle = '#cceeff';
+    ctx.lineWidth = 2.5;
+    this.trunk.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    this.branches.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    // White core (trunk only, brighter)
     ctx.globalAlpha = a;
     ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1.5;
-    this.segments.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    ctx.lineWidth = 1.2;
+    this.trunk.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
   }
 }
 
@@ -506,6 +539,7 @@ const GATHER_START = 2.2;
 const LABELS_SHOW = 4.8;
 let bolts = [];
 let boltTimer = 0;
+let boltBurst = 0; // burst counter for rapid multi-strike
 
 // --- Init ---------------------------------------------------
 function initStars() {
@@ -640,15 +674,23 @@ function loop(timestamp) {
     const freeze = hoveredNebula ? 0.08 : 0.75;
     stars.forEach(s => { s.updateWarp(dt * freeze); s.drawWarp(ctx); });
 
-    // Occasional lightning at edges
+    // Lightning: random timing, occasional bursts, slow-mo on hover
     boltTimer -= dt;
-    if (boltTimer <= 0 && !hoveredNebula) {
-      bolts.push(new Lightning());
-      boltTimer = rand(0.6, 2.5);
-      if (bolts.length > 4) bolts.shift();
+    if (boltTimer <= 0) {
+      const count = boltBurst > 0 ? boltBurst : (Math.random() < 0.25 ? randInt(2, 4) : 1);
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => { if (phase === Phase.IDLE) bolts.push(new Lightning()); }, i * rand(40, 150));
+      }
+      boltTimer = rand(0.4, 4.5); // highly irregular interval
+      boltBurst = 0;
+      if (bolts.length > 6) bolts.splice(0, bolts.length - 6);
     }
-    bolts.forEach(b => { b.update(dt); b.draw(ctx); });
+    // On time-stop (hover), lightning unfolds slowly for dramatic effect
+    const boltDt = hoveredNebula ? dt * 0.15 : dt;
+    bolts.forEach(b => { b.update(boltDt); b.draw(ctx); });
     bolts = bolts.filter(b => b.alive);
+    // Small chance to queue a burst for next strike
+    if (!hoveredNebula && Math.random() < 0.003) boltBurst = randInt(2, 4);
   } else {
     const sparkle = hoveredNebula ? 1 : 0;
     stars.forEach(s => s.draw(ctx, globalTime, sparkle));
