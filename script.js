@@ -523,7 +523,7 @@ class Lightning {
       const ba = targetAngle + (rand(0,1)<0.5?-1:1) * rand(0.6, 1.2);
       this.branches.push(this.buildPath(bp.x, bp.y, ba, totalLen * rand(0.15, 0.35), 50));
     }
-    this.life = fromCenter ? rand(0.15, 0.35) : rand(0.12, 0.28);
+    this.life = fromCenter ? rand(0.08, 0.5) : rand(0.06, 0.55);
     this.maxLife = this.life;
     this.alive = true;
     this.triggeredPulse = !fromCenter;
