@@ -108,13 +108,15 @@ class Star {
     this.warpDist = Math.sqrt(dx*dx + dy*dy) || 1;
     this.warpSpeed = this.warpDist * rand(0.8, 2.5);
   }
-  updateWarp(dt) {
-    // Speed increases with distance (perspective acceleration)
+  updateWarp(dt, t) {
     this.warpSpeed += this.warpDist * 0.8 * dt;
     this.warpDist += this.warpSpeed * dt;
-    this.x = cx + Math.cos(this.warpAngle) * this.warpDist;
-    this.y = cy + Math.sin(this.warpAngle) * this.warpDist;
-    // Respawn near center when off screen
+    // Space distortion: sinusoidal perpendicular offset
+    const distort = Math.sin(t * 2 + this.warpDist * 0.01) * 5;
+    const px = Math.cos(this.warpAngle + Math.PI / 2) * distort;
+    const py = Math.sin(this.warpAngle + Math.PI / 2) * distort;
+    this.x = cx + Math.cos(this.warpAngle) * this.warpDist + px;
+    this.y = cy + Math.sin(this.warpAngle) * this.warpDist + py;
     const diag = Math.sqrt(W*W + H*H);
     if (this.warpDist > diag * 0.8) {
       this.warpAngle = rand(0, Math.PI * 2);
@@ -529,12 +531,120 @@ class Lightning {
   }
 }
 
+// --- Particle Arc (quantum connection between nearby particles)
+const MAX_ARCS = 20;
+let arcs = [];
+class ArcFlash {
+  constructor(x1, y1, x2, y2) {
+    this.x1 = x1; this.y1 = y1;
+    this.x2 = x2; this.y2 = y2;
+    this.life = rand(0.04, 0.12);
+    this.maxLife = this.life;
+    this.alive = true;
+  }
+  update(dt) { this.life -= dt; if (this.life <= 0) this.alive = false; }
+  draw(ctx, temp) {
+    const a = Math.max(0, this.life / this.maxLife);
+    const col = temp > 0.5 ? '#fff' : '#66ccff';
+    ctx.globalAlpha = a * 0.25;
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(this.x1, this.y1); ctx.lineTo(this.x2, this.y2); ctx.stroke();
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(this.x1, this.y1); ctx.lineTo(this.x2, this.y2); ctx.stroke();
+  }
+}
+
+// --- Center Energy Core state ---
+let centerPulse = 0;      // 0..1, triggered by lightning/burst
+let burstTimer = rand(8, 15);
+let burstActive = 0;      // 0..1, burst intensity
+let colorTemp = 0;        // 0=cold blue, 1=white hot
+
+// Lightning → center: bolts aim toward center area
+class Lightning {
+  constructor() {
+    const edge = randInt(0, 3);
+    let sx, sy;
+    // Target center area (within ~200px)
+    const tx = cx + rand(-200, 200);
+    const ty = cy + rand(-150, 150);
+    // Calculate angle from edge toward center target
+    const baseAngle = Math.atan2(ty - (edge === 2 ? H+10 : edge === 0 ? -10 : rand(0,H)),
+                                 tx - (edge === 1 ? W+10 : edge === 3 ? -10 : rand(0,W)));
+    if (edge === 0)      { sx = rand(0, W); sy = -10; }
+    else if (edge === 1) { sx = W + 10; sy = rand(0, H); }
+    else if (edge === 2) { sx = rand(0, W); sy = H + 10; }
+    else                 { sx = -10; sy = rand(0, H); }
+    this.allSegs = [];
+    this.growTree(sx, sy, baseAngle, 0.8, 4);
+    this.life = rand(0.12, 0.28);
+    this.maxLife = this.life;
+    this.alive = true;
+    this.triggeredPulse = false;
+  }
+  growTree(x, y, angle, length, depth) {
+    if (depth <= 0 || length < 0.05) return;
+    const maxL = Math.max(W, H);
+    const segLen = length * maxL * rand(0.12, 0.22);
+    const steps = randInt(3, 6);
+    let cx = x, cy = y, ca = angle;
+    for (let i = 0; i < steps; i++) {
+      ca += rand(-0.25, 0.25);
+      const nx = cx + Math.cos(ca) * segLen;
+      const ny = cy + Math.sin(ca) * segLen;
+      this.allSegs.push({ x1: cx, y1: cy, x2: nx, y2: ny, trunk: depth >= 3 });
+      cx = nx; cy = ny;
+    }
+    const branchCount = depth >= 3 ? randInt(1, 3) : randInt(0, 1);
+    for (let b = 0; b < branchCount; b++) {
+      const bt = rand(0.3, 0.7);
+      const bx = x + Math.cos(angle) * segLen * steps * bt;
+      const by = y + Math.sin(angle) * segLen * steps * bt;
+      const side = rand(0, 1) < 0.5 ? -1 : 1;
+      const ba = angle + side * rand(0.7, 1.2);
+      this.growTree(bx, by, ba, length * rand(0.3, 0.6), depth - 1);
+    }
+  }
+  update(dt) {
+    this.life -= dt;
+    if (this.life <= 0) {
+      this.alive = false;
+      if (!this.triggeredPulse) { centerPulse = 1.0; this.triggeredPulse = true; }
+    }
+  }
+  draw(ctx, temp) {
+    const a = Math.max(0, this.life / this.maxLife);
+    const trunks = this.allSegs.filter(s => s.trunk);
+    const twigs = this.allSegs.filter(s => !s.trunk);
+    const glowCol = temp > 0.5 ? '#ffffff' : '#6699dd';
+    const midCol = temp > 0.5 ? '#ffffff' : '#aaddff';
+    ctx.globalAlpha = a * 0.2;
+    ctx.strokeStyle = glowCol;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    this.allSegs.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    ctx.globalAlpha = a * 0.45;
+    ctx.strokeStyle = midCol;
+    ctx.lineWidth = 3;
+    trunks.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    ctx.lineWidth = 1.5;
+    twigs.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.2;
+    trunks.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+  }
+}
+
 const METEOR_START = 0.3;
 const GATHER_START = 2.2;
 const LABELS_SHOW = 4.8;
 let bolts = [];
 let boltTimer = 0;
-let boltBurst = 0; // burst counter for rapid multi-strike
+let boltBurst = 0;
 
 // --- Init ---------------------------------------------------
 function initStars() {
@@ -667,25 +777,78 @@ function loop(timestamp) {
   // Stars: static during animation, warp tunnel in IDLE
   if (phase === Phase.IDLE) {
     const freeze = hoveredNebula ? 0.08 : 0.75;
-    stars.forEach(s => { s.updateWarp(dt * freeze); s.drawWarp(ctx); });
+    stars.forEach(s => { s.updateWarp(dt * freeze, globalTime); s.drawWarp(ctx); });
 
-    // Lightning: random timing, occasional bursts, slow-mo on hover
+    // --- Center Energy Core ---
+    const coreBase = 22;
+    const coreR = coreBase + Math.sin(globalTime * 2) * 4 + centerPulse * 20 + burstActive * 35;
+    const coreAlpha = 0.15 + centerPulse * 0.5 + burstActive * 0.7;
+    const coreCol = colorTemp > 0.5
+      ? `rgba(255,255,255,` : `rgba(180,220,255,`;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 2.5);
+    g.addColorStop(0, coreCol + (coreAlpha * 1.2) + ')');
+    g.addColorStop(0.3, coreCol + (coreAlpha * 0.5) + ')');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, coreR * 2.5, 0, Math.PI * 2); ctx.fill();
+
+    // Decay center pulse / burst
+    centerPulse = Math.max(0, centerPulse - dt * 3);
+    burstActive = Math.max(0, burstActive - dt * 2);
+    colorTemp += (0 - colorTemp) * 2 * dt; // recover toward cold
+
+    // --- Particle Arc Lightning ---
+    for (let i = 0; i < stars.length; i += 8) {
+      for (let j = i + 4; j < stars.length; j += 8) {
+        const a = stars[i], b = stars[j];
+        const d = Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2);
+        if (d < 80 && Math.random() < 0.002) {
+          arcs.push(new ArcFlash(a.x, a.y, b.x, b.y));
+          if (arcs.length > MAX_ARCS) arcs.shift();
+        }
+      }
+    }
+    arcs.forEach(a => { a.update(dt * (freeze || 0.75)); a.draw(ctx, colorTemp); });
+    arcs = arcs.filter(a => a.alive);
+
+    // --- Edge Lightning ---
     boltTimer -= dt;
     if (boltTimer <= 0) {
       const count = boltBurst > 0 ? boltBurst : (Math.random() < 0.25 ? randInt(2, 4) : 1);
       for (let i = 0; i < count; i++) {
         setTimeout(() => { if (phase === Phase.IDLE) bolts.push(new Lightning()); }, i * rand(40, 150));
       }
-      boltTimer = rand(0.4, 4.5); // highly irregular interval
+      boltTimer = rand(0.4, 4.5);
       boltBurst = 0;
-      if (bolts.length > 6) bolts.splice(0, bolts.length - 6);
+      if (bolts.length > 8) bolts.splice(0, bolts.length - 8);
     }
-    // On time-stop (hover), lightning unfolds slowly for dramatic effect
     const boltDt = hoveredNebula ? dt * 0.15 : dt;
-    bolts.forEach(b => { b.update(boltDt); b.draw(ctx); });
+    bolts.forEach(b => { b.update(boltDt); b.draw(ctx, colorTemp); });
     bolts = bolts.filter(b => b.alive);
-    // Small chance to queue a burst for next strike
     if (!hoveredNebula && Math.random() < 0.003) boltBurst = randInt(2, 4);
+
+    // --- Energy Burst (center → outward) ---
+    burstTimer -= dt;
+    if (burstTimer <= 0 && !hoveredNebula) {
+      burstActive = 1.0;
+      colorTemp = 1.0; // white hot
+      const burstCount = randInt(8, 16);
+      for (let i = 0; i < burstCount; i++) {
+        const angle = rand(0, Math.PI * 2);
+        const bl = rand(80, 250);
+        const bx = cx + Math.cos(angle) * bl;
+        const by = cy + Math.sin(angle) * bl;
+        const b = new Lightning();
+        // Override: start from center instead of edge
+        b.allSegs = [];
+        b.growTree(cx, cy, angle, rand(0.2, 0.5), 3);
+        b.life = rand(0.15, 0.35);
+        b.maxLife = b.life;
+        bolts.push(b);
+      }
+      burstTimer = rand(8, 15);
+      if (bolts.length > 12) bolts.splice(0, bolts.length - 12);
+    }
   } else {
     const sparkle = hoveredNebula ? 1 : 0;
     stars.forEach(s => s.draw(ctx, globalTime, sparkle));
