@@ -105,7 +105,7 @@ h1, h2, h3 {
 .type-line.mono {
   font-family: Consolas, 'Courier New', monospace;
   font-size: 1rem;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,0.65);
   letter-spacing: 0.08em;
   min-height: 1.5em;
 }
