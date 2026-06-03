@@ -51,7 +51,7 @@ html { scroll-behavior: smooth; }
 
 body {
   font-family: 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', 'Segoe UI', sans-serif;
-  background: var(--bg);
+  background: var(--bg-card);
   color: var(--text-primary);
   line-height: 1.7;
   min-height: 100vh;
@@ -235,7 +235,6 @@ h1, h2, h3 {
    SUB-PAGE SHARED STYLES
    ============================================================ */
 .sub-page {
-  background: var(--bg);
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
