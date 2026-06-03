@@ -208,40 +208,37 @@ const NEBULA_DEFS = [
   { label: '技术小结', url: 'notes/',        hue: 340, sat: 80, light: 58 },
 ];
 
-// Elliptical orbits: { rx, ry (ratio of min(W,H)), speed, offset }
-const NEBULA_ORBITS = [
-  { rx: 0.35, ry: 0.24, speed: 0.11, offset: 0 },
-  { rx: 0.42, ry: 0.20, speed: 0.08, offset: Math.PI * 0.4 },
-  { rx: 0.38, ry: 0.28, speed: 0.13, offset: Math.PI * 0.8 },
-  { rx: 0.33, ry: 0.22, speed: 0.10, offset: Math.PI * 1.25 },
-  { rx: 0.45, ry: 0.26, speed: 0.07, offset: Math.PI * 1.65 },
-];
+// Single shared elliptical orbit — wide, flat, around center text
+const ORBIT_RX = 0.50;  // wide horizontal
+const ORBIT_RY = 0.18;  // flat vertical — keeps clear of center text
+const ORBIT_SPEED = 0.08;
+const ORBIT_CY = 0.50;  // orbit center y (same as text center)
+const NEBULA_COUNT = 5;
 
 class Nebula {
-  constructor(def, orbit, index) {
+  constructor(def, index) {
     this.label = def.label;
     this.url = def.url;
     this.hue = def.hue;
     this.sat = def.sat;
     this.light = def.light;
     this.cx = 0; this.cy = 0;
-    this.radius = 110; // larger nebula
+    this.radius = 110;
     this.particles = []; // starts EMPTY — no particles before meteor
     this.index = index;
-    this.orbitRx = orbit.rx;
-    this.orbitRy = orbit.ry;
-    this.orbitSpeed = orbit.speed;
-    this.orbitOffset = orbit.offset;
+    // Evenly spaced along the shared orbit
+    this.orbitOffset = (Math.PI * 2 / NEBULA_COUNT) * index;
     this.hovered = false;
     this.hasParticles = false;
   }
 
   getOrbitPos(t) {
     const base = Math.min(W, H);
-    const angle = this.orbitOffset + t * this.orbitSpeed;
+    const angle = this.orbitOffset + t * ORBIT_SPEED;
+    const orbitCy = H * ORBIT_CY;
     return {
-      x: cx + Math.cos(angle) * base * this.orbitRx,
-      y: cy + Math.sin(angle) * base * this.orbitRy,
+      x: cx + Math.cos(angle) * base * ORBIT_RX,
+      y: orbitCy + Math.sin(angle) * base * ORBIT_RY,
     };
   }
 
@@ -354,7 +351,7 @@ function initStars() {
 
 function initNebulae() {
   // Create nebulae with NO particles — they're empty until meteor scatters
-  nebulae = NEBULA_DEFS.map((def, i) => new Nebula(def, NEBULA_ORBITS[i], i));
+  nebulae = NEBULA_DEFS.map((def, i) => new Nebula(def, i));
 
   labelEls.forEach(item => { if (item.el && item.el.remove) item.el.remove(); });
   labelEls = [];
