@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>个人介绍 — Jimmy Yang</title>
   <link rel="stylesheet" href="../style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <button class="theme-toggle" aria-label="Toggle theme" id="themeToggle">
@@ -20,69 +19,84 @@
     </header>
 
     <!-- 概述 -->
-    <section class="content-block">
-      <p>
-        我叫<strong>杨建明</strong>（Jimmy Yang），上海大学人工智能硕士（2026届），
-        即将入职波克网络科技有限公司，从事 AI 驱动的质量保障与测试开发工作。
-      </p>
-      <p>
-        我的技术背景横跨大语言模型与软件工程：硕士期间研究多模态大模型的视觉问答，
-        发表 SCI 论文 2 篇；实习期间在字节跳动基于 LLM 构建智能体工作流，自动生成测试用例并提升覆盖率。
-      </p>
+    <section class="about-grid">
+      <div class="about-text">
+        <p>
+          我叫<strong>杨建明</strong>（Jimmy Yang），上海大学人工智能硕士（2026届），
+          即将入职<strong>波克网络科技有限公司</strong>，从事 AI 驱动的质量保障工作。
+        </p>
+        <p>
+          我的技术背景横跨<em>大语言模型</em>与<em>软件工程</em>——硕士期间研究多模态大模型的视觉问答，
+          对 Attention 机制有深入理解，发表 SCI 论文 2 篇；
+          实习期间在字节跳动基于 LLM 构建智能体工作流，自动生成测试用例并显著提升覆盖率。
+        </p>
+      </div>
+      <div class="about-stats">
+        <div class="stat">
+          <span class="stat-number">硕士</span>
+          <span class="stat-label">上海大学·AI</span>
+        </div>
+        <div class="stat">
+          <span class="stat-number">SCI×2</span>
+          <span class="stat-label">多模态VQA</span>
+        </div>
+        <div class="stat">
+          <span class="stat-number">国奖</span>
+          <span class="stat-label">数学建模</span>
+        </div>
+        <div class="stat">
+          <span class="stat-number">564</span>
+          <span class="stat-label">CET-6</span>
+        </div>
+      </div>
     </section>
 
-    <!-- 数据卡片 -->
-    <div class="stats-grid">
-      <div class="stat-item">
-        <span class="stat-number">硕士</span>
-        <span class="stat-label">上海大学·AI</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-number">SCI×2</span>
-        <span class="stat-label">多模态VQA</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-number">国奖</span>
-        <span class="stat-label">数学建模</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-number">564</span>
-        <span class="stat-label">CET-6</span>
-      </div>
-    </div>
-
     <!-- 教育经历 -->
-    <section class="content-block">
-      <h3>教育经历</h3>
+    <section>
+      <h2 class="section-title">
+        <span class="section-number">01</span>教育经历
+      </h2>
       <div class="timeline">
         <div class="timeline-item current">
-          <div class="timeline-date">2023.09 — 2026.06</div>
-          <div class="timeline-title">上海大学 · 人工智能 硕士</div>
-          <div class="timeline-desc">
-            研究方向：多模态大语言模型视觉问答（Training-free），对 Attention 机制有深入研究。
+          <div class="timeline-marker"></div>
+          <div class="timeline-content">
+            <h3>上海大学 · 人工智能 硕士</h3>
+            <p class="timeline-date">2023.09 — 2026.06</p>
+            <p class="timeline-desc">
+              研究方向：多模态大语言模型视觉问答（Training-free），对 Attention 机制有深入研究。
+            </p>
+            <div class="honor"><span class="honor-icon">🏆</span> "华为杯"第21届中国研究生数学建模竞赛 国家二等奖</div>
+            <div class="honor"><span class="honor-icon">📄</span> SCI 论文 2 篇（多模态 LLM 视觉问答方向）</div>
           </div>
-          <div class="honor"><span class="honor-icon">🏆</span> "华为杯"第21届中国研究生数学建模竞赛 国家二等奖</div>
-          <div class="honor"><span class="honor-icon">📄</span> SCI 论文 2 篇（多模态 LLM 视觉问答方向）</div>
         </div>
         <div class="timeline-item">
-          <div class="timeline-date">2019.09 — 2023.06</div>
-          <div class="timeline-title">中国石油大学（华东）· 数据科学与大数据技术 学士</div>
-          <div class="timeline-desc">偏数学应用统计方向，主修 Python 数据分析与机器学习。</div>
+          <div class="timeline-marker"></div>
+          <div class="timeline-content">
+            <h3>中国石油大学（华东）· 数据科学与大数据技术 学士</h3>
+            <p class="timeline-date">2019.09 — 2023.06</p>
+            <p class="timeline-desc">偏数学应用统计方向，主修 Python 数据分析与机器学习。</p>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- 实习经历 -->
-    <section class="content-block">
-      <h3>实习经历</h3>
+    <section style="margin-top: 3rem;">
+      <h2 class="section-title">
+        <span class="section-number">02</span>实习经历
+      </h2>
       <div class="timeline">
         <div class="timeline-item">
-          <div class="timeline-date">2025.11 — 2026.02</div>
-          <div class="timeline-title">大模型测试开发实习生</div>
-          <div class="timeline-org">字节跳动蜜柚网络科技（上海）有限公司</div>
-          <div class="timeline-desc">
-            基于 LLM 定制智能体工作流，自动生成高质量测试用例，显著提升测试覆盖率；
-            参与大模型产品测试框架的设计与迭代。
+          <div class="timeline-marker"></div>
+          <div class="timeline-content">
+            <div class="timeline-tag">Internship</div>
+            <h3>大模型测试开发实习生</h3>
+            <p class="timeline-org">字节跳动蜜柚网络科技（上海）有限公司</p>
+            <p class="timeline-date">2025.11 — 2026.02</p>
+            <p class="timeline-desc">
+              基于 LLM 定制智能体工作流，自动生成高质量测试用例，显著提升测试覆盖率；
+              参与大模型产品测试框架的设计与迭代。
+            </p>
           </div>
         </div>
       </div>
