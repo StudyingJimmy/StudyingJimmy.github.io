@@ -533,18 +533,26 @@ class Lightning {
     const pts = [{x, y}];
     const stepLen = totalLen / steps;
     let cx = x, cy = y, ca = targetAngle;
-    let prevTurn = 0; // track last turn direction to avoid arcs
+    let prevTurn = 0;
     const tx = x + Math.cos(targetAngle) * totalLen;
     const ty = y + Math.sin(targetAngle) * totalLen;
     for (let i = 0; i < steps; i++) {
-      // Alternate turn direction: slight bias opposite to previous turn
-      const bias = -prevTurn * 0.5;
+      // Strong reversal bias: each turn must mostly undo the previous
+      const bias = -prevTurn * 0.8;
       const turn = rand(-0.06, 0.06) + bias;
       ca += turn;
       prevTurn = turn;
-      // Forward bias: gently correct toward target
+      // Clamp deviation from target direction to max ±0.25 rad (~15°)
       const toTarget = Math.atan2(ty - cy, tx - cx);
-      ca += (toTarget - ca) * 0.08;
+      let diff = toTarget - ca;
+      // Normalize to [-PI, PI]
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      if (Math.abs(diff) > 0.25) {
+        ca += (diff > 0 ? 1 : -1) * 0.25;
+      } else {
+        ca += diff * 0.1;
+      }
       cx += Math.cos(ca) * stepLen;
       cy += Math.sin(ca) * stepLen;
       pts.push({x: cx, y: cy});
