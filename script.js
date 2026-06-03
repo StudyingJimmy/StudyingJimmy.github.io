@@ -531,30 +531,27 @@ class Lightning {
   // Build dense continuous path: ~200 points, max 3-5° turn per step
   buildPath(x, y, targetAngle, totalLen, steps) {
     const pts = [{x, y}];
-    const stepLen = totalLen / steps;
-    let cx = x, cy = y, ca = targetAngle;
-    let prevTurn = 0;
-    const tx = x + Math.cos(targetAngle) * totalLen;
-    const ty = y + Math.sin(targetAngle) * totalLen;
+    const perpX = Math.cos(targetAngle + Math.PI/2);
+    const perpY = Math.sin(targetAngle + Math.PI/2);
+    const fwdX = Math.cos(targetAngle);
+    const fwdY = Math.sin(targetAngle);
+    let cx = x, cy = y;
+    let offset = 0; // current lateral offset
+    let offsetV = 0; // lateral velocity
     for (let i = 0; i < steps; i++) {
-      // Strong reversal bias: each turn must mostly undo the previous
-      const bias = -prevTurn * 0.8;
-      const turn = rand(-0.06, 0.06) + bias;
-      ca += turn;
-      prevTurn = turn;
-      // Clamp deviation from target direction to max ±0.25 rad (~15°)
-      const toTarget = Math.atan2(ty - cy, tx - cx);
-      let diff = toTarget - ca;
-      // Normalize to [-PI, PI]
-      while (diff > Math.PI) diff -= Math.PI * 2;
-      while (diff < -Math.PI) diff += Math.PI * 2;
-      if (Math.abs(diff) > 0.25) {
-        ca += (diff > 0 ? 1 : -1) * 0.25;
-      } else {
-        ca += diff * 0.1;
-      }
-      cx += Math.cos(ca) * stepLen;
-      cy += Math.sin(ca) * stepLen;
+      const t = i / steps;
+      // Forward progress (mostly uniform with slight jitter)
+      cx += fwdX * (totalLen / steps) * rand(0.8, 1.2);
+      cy += fwdY * (totalLen / steps) * rand(0.8, 1.2);
+      // Lateral: spring-damped random walk — creates jagged zigzag
+      offsetV += rand(-8, 8);
+      offsetV *= 0.7; // damping prevents runaway
+      offset += offsetV;
+      // Spring pulls offset back toward center line
+      offset *= 0.92;
+      // Apply lateral offset
+      cx += perpX * offset;
+      cy += perpY * offset;
       pts.push({x: cx, y: cy});
     }
     return pts;
