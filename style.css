@@ -549,16 +549,61 @@ h1, h2, h3 {
   font-family: Consolas, 'Courier New', monospace;
 }
 
-/* Honor items */
-.honor {
+/* Honor items — refined, no emoji */
+.honor-item {
   display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.5rem 0;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
-.honor-icon { flex-shrink: 0; }
+.honor-item::before {
+  content: '◆';
+  font-size: 0.4rem;
+  color: var(--accent);
+  flex-shrink: 0;
+  position: relative;
+  top: -0.15rem;
+}
+
+/* Resume CTA — centered at page bottom */
+.resume-cta {
+  text-align: center;
+  margin-top: 3.5rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--border);
+}
+.resume-cta-label {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
+}
+.resume-cta .btn-resume {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 2.2rem;
+  background: transparent;
+  color: var(--accent) !important;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s;
+  cursor: pointer;
+  font-family: 'Microsoft YaHei', sans-serif;
+  letter-spacing: 0.03em;
+}
+.resume-cta .btn-resume:hover {
+  background: var(--accent);
+  color: #fff !important;
+  box-shadow: 0 4px 20px var(--accent-glow);
+  opacity: 1 !important;
+}
 
 /* Footer (sub-pages) */
 .sub-footer {
