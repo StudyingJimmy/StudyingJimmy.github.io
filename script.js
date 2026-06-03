@@ -348,7 +348,7 @@ class Nebula {
   }
 
   contains(mx, my) {
-    return dist({x: mx, y: my}, {x: this.cx, y: this.cy}) < this.radius + 40;
+    return dist({x: mx, y: my}, {x: this.cx, y: this.cy}) < this.radius;
   }
 }
 
