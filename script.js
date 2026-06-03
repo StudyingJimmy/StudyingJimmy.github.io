@@ -593,7 +593,8 @@ function loop(timestamp) {
 
   // Stars: static during animation, warp tunnel in IDLE
   if (phase === Phase.IDLE) {
-    stars.forEach(s => { s.updateWarp(dt); s.drawWarp(ctx); });
+    const freeze = hoveredNebula ? 0.08 : 0.75; // time-stop on hover, 25% slower
+    stars.forEach(s => { s.updateWarp(dt * freeze); s.drawWarp(ctx); });
   } else {
     const sparkle = hoveredNebula ? 1 : 0;
     stars.forEach(s => s.draw(ctx, globalTime, sparkle));
