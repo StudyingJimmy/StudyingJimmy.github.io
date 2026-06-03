@@ -761,18 +761,18 @@ function loop(timestamp) {
     // --- Edge Lightning ---
     boltTimer -= dt;
     if (boltTimer <= 0) {
-      const count = boltBurst > 0 ? boltBurst : (Math.random() < 0.25 ? randInt(2, 4) : 1);
+      const count = boltBurst > 0 ? boltBurst : (Math.random() < 0.12 ? randInt(2, 3) : 1);
       for (let i = 0; i < count; i++) {
         setTimeout(() => { if (phase === Phase.IDLE) bolts.push(new Lightning()); }, i * rand(40, 150));
       }
-      boltTimer = rand(0.4, 4.5);
+      boltTimer = rand(1.5, 6);
       boltBurst = 0;
       if (bolts.length > 8) bolts.splice(0, bolts.length - 8);
     }
     const boltDt = hoveredNebula ? dt * 0.15 : dt;
     bolts.forEach(b => { b.update(boltDt); b.draw(ctx, colorTemp); });
     bolts = bolts.filter(b => b.alive);
-    if (!hoveredNebula && Math.random() < 0.003) boltBurst = randInt(2, 4);
+    if (!hoveredNebula && Math.random() < 0.001) boltBurst = randInt(2, 3);
 
     // --- Energy Burst (center → outward) ---
     burstTimer -= dt;
