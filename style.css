@@ -650,18 +650,14 @@ body.cosmic .global-footer {
   z-index: 100;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.55rem 1.5rem;
+  padding: 0.5rem 1.5rem;
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
   font-size: 0.8rem;
   transition: background 0.4s ease, border-color 0.4s ease;
+  animation: fadeDown 0.5s ease both;
 }
-.global-nav a {
-  color: var(--text-muted);
-  text-decoration: none;
-  transition: color 0.2s;
-}
+.global-nav a { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
 .global-nav a:hover { color: var(--accent); opacity: 1; }
 
 .global-nav-home {
@@ -669,20 +665,51 @@ body.cosmic .global-footer {
   align-items: center;
   gap: 0.3rem;
   white-space: nowrap;
+  margin-right: 1.5rem;
 }
 .global-nav-links {
   display: flex;
   align-items: center;
   gap: 1.2rem;
+  flex: 1;
+  justify-content: center;
 }
 .global-nav-links a.active {
   color: var(--accent);
   pointer-events: none;
 }
 
+/* Theme toggle inside nav — overrides fixed positioning */
+.global-nav .theme-toggle {
+  position: static;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 /* Push slide content below nav */
 .slide-page .slide-container {
   padding-top: 2.8rem;
+}
+
+/* --- Page Enter Animations --------------------------------- */
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sub-page {
+  animation: fadeUp 0.6s 0.12s ease both;
+}
+.global-footer {
+  animation: fadeUp 0.5s 0.25s ease both;
 }
 
 /* Remove old sub-page header styles when using global nav */
