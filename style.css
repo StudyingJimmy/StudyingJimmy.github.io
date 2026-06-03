@@ -238,6 +238,10 @@ h1, h2, h3 {
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+  transition: color 0.4s ease;
+}
+.sub-page * {
+  transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
 }
 .sub-header {
   display: flex;
