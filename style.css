@@ -56,9 +56,9 @@ body {
   line-height: 1.7;
   min-height: 100vh;
   overflow-x: hidden;
-  transition: background 0.3s ease, color 0.3s ease;
+  transition: background 0.45s ease, color 0.45s ease;
 }
-body.cosmic { background: #000; }
+body.cosmic { background: #000; transition: none; }
 
 a { color: var(--accent); text-decoration: none; transition: opacity 0.2s; }
 a:hover { opacity: 0.8; }
@@ -210,27 +210,31 @@ h1, h2, h3 {
   transform: scale(1.2);
   color: var(--accent);
 }
+.theme-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: transform 0.5s ease, opacity 0.5s ease;
+  z-index: -1;
+}
+.theme-toggle:active::after {
+  transform: scale(3.5);
+  opacity: 0.12;
+}
 .theme-icon-dark, .theme-icon-light {
   transition: opacity 0.3s ease;
 }
 [data-theme="dark"] .theme-icon-light { opacity: 0; pointer-events: none; }
 [data-theme="light"] .theme-icon-dark { opacity: 0; pointer-events: none; }
 
-/* Theme transition — behind content, above body bg */
-#themeTransition {
-  position: fixed;
-  z-index: 1;
-  pointer-events: none;
-  border-radius: 50%;
-  transform: scale(0);
-}
-
 /* ============================================================
    SUB-PAGE SHARED STYLES
    ============================================================ */
 .sub-page {
-  position: relative;
-  z-index: 2;
   background: var(--bg);
   max-width: 800px;
   margin: 0 auto;
@@ -245,7 +249,6 @@ h1, h2, h3 {
   border-bottom: 1px solid var(--border);
 }
 .sub-back {
-  font-family: Consolas, 'Courier New', monospace;
   font-size: 0.85rem;
   color: var(--text-muted);
   transition: color 0.2s;
@@ -258,7 +261,6 @@ h1, h2, h3 {
   color: var(--text-primary);
 }
 .sub-section-number {
-  font-family: Consolas, 'Courier New', monospace;
   font-size: 0.8rem;
   color: var(--accent);
   margin-right: 0.5rem;
@@ -275,7 +277,6 @@ h1, h2, h3 {
   color: var(--text-primary);
 }
 .section-title .section-number {
-  font-family: Consolas, 'Courier New', monospace;
   font-size: 0.8rem;
   color: var(--accent);
   font-weight: 400;
@@ -326,7 +327,6 @@ h1, h2, h3 {
 .stat .stat-label {
   font-size: 0.72rem;
   color: var(--text-muted);
-  font-family: Consolas, 'Courier New', monospace;
 }
 
 /* Timeline */
@@ -363,7 +363,6 @@ h1, h2, h3 {
   box-shadow: 0 0 8px var(--accent-glow);
 }
 .timeline-date {
-  font-family: Consolas, 'Courier New', monospace;
   font-size: 0.78rem;
   color: var(--text-muted);
   margin-bottom: 0.3rem;
@@ -385,7 +384,6 @@ h1, h2, h3 {
 }
 .timeline-tag {
   display: inline-block;
-  font-family: Consolas, 'Courier New', monospace;
   font-size: 0.7rem;
   padding: 0.2rem 0.6rem;
   border-radius: 3px;
@@ -422,7 +420,6 @@ h1, h2, h3 {
   border-top: 1px solid var(--border);
 }
 .resume-cta-label {
-  font-family: Consolas, 'Courier New', monospace;
   font-size: 0.7rem;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -536,7 +533,6 @@ h1, h2, h3 {
 .stat-label {
   font-size: 0.72rem;
   color: var(--text-muted);
-  font-family: Consolas, 'Courier New', monospace;
 }
 
 /* Sub-footer */
@@ -547,7 +543,6 @@ h1, h2, h3 {
   border-top: 1px solid var(--border);
 }
 .sub-footer p {
-  font-family: Consolas, 'Courier New', monospace;
   font-size: 0.7rem;
   color: var(--text-muted);
 }
