@@ -183,33 +183,39 @@ h1, h2, h3 {
 }
 
 /* ============================================================
-   THEME TOGGLE
+   THEME TOGGLE — icon only, no circle
    ============================================================ */
 .theme-toggle {
   position: fixed;
   top: 1.5rem;
   right: 1.5rem;
   z-index: 1000;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1px solid var(--border-strong);
-  background: rgba(0,0,0,0.4);
-  backdrop-filter: blur(10px);
-  color: var(--text-primary);
+  border: none;
+  background: none;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.25s;
+  padding: 0.3rem;
+  transition: transform 0.25s, color 0.25s;
+  color: var(--text-muted);
 }
 .theme-toggle:hover {
-  border-color: var(--accent);
-  box-shadow: 0 0 16px var(--accent-glow);
+  transform: scale(1.2);
+  color: var(--accent);
 }
 [data-theme="dark"] .theme-icon-light { display: none; }
 [data-theme="light"] .theme-icon-dark { display: none; }
+
+/* Theme transition overlay */
+#themeTransition {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  display: none;
+}
 
 /* ============================================================
    SUB-PAGE SHARED STYLES

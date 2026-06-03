@@ -17,15 +17,66 @@ function resize() {
 resize();
 window.addEventListener('resize', resize);
 
-// --- Theme --------------------------------------------------
+// --- Theme (with circle-expand transition) -------------------
 const html = document.documentElement;
 const themeToggle = document.getElementById('themeToggle');
 function getTheme() { return localStorage.getItem('theme') || 'dark'; }
 function setTheme(t) { html.setAttribute('data-theme', t); localStorage.setItem('theme', t); }
 setTheme(getTheme());
+
+// Create transition overlay (used on sub-pages only)
+let transEl = null;
+function ensureTransEl() {
+  if (!transEl) {
+    transEl = document.createElement('div');
+    transEl.id = 'themeTransition';
+    document.body.appendChild(transEl);
+  }
+  return transEl;
+}
+
+function animateThemeSwitch(fromDark) {
+  if (!themeToggle) return;
+  const el = ensureTransEl();
+  const rect = themeToggle.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const targetBg = fromDark ? 'var(--bg)' : 'var(--bg)';
+  // Use theme CSS variable colors directly
+  const bgColor = fromDark ? '#faf8f5' : '#0d0d14';
+
+  el.style.background = bgColor;
+  el.style.display = 'block';
+
+  if (fromDark) {
+    // Dark → Light: expand from button outward
+    el.style.transition = 'none';
+    el.style.clipPath = `circle(0% at ${cx}px ${cy}px)`;
+    el.offsetHeight; // force reflow
+    el.style.transition = 'clip-path 0.55s cubic-bezier(0.4, 0, 0.2, 1)';
+    el.style.clipPath = `circle(150% at ${cx}px ${cy}px)`;
+  } else {
+    // Light → Dark: collapse toward button inward
+    el.style.transition = 'none';
+    el.style.clipPath = `circle(150% at ${cx}px ${cy}px)`;
+    el.offsetHeight;
+    el.style.transition = 'clip-path 0.55s cubic-bezier(0.4, 0, 0.2, 1)';
+    el.style.clipPath = `circle(0% at ${cx}px ${cy}px)`;
+  }
+
+  setTimeout(() => {
+    setTheme(fromDark ? 'light' : 'dark');
+  }, 200);
+
+  setTimeout(() => {
+    el.style.display = 'none';
+  }, 600);
+}
+
 if (themeToggle) {
   themeToggle.addEventListener('click', () => {
-    setTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    animateThemeSwitch(isDark);
   });
 }
 
