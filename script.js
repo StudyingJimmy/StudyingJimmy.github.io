@@ -75,12 +75,14 @@ class Star {
     this.speed = rand(0.3, 1.5);
     this.size = rand(0.8, 2.5);
   }
-  draw(ctx, t) {
-    const a = this.baseAlpha + Math.sin(t * this.speed + this.phase) * 0.25;
+  draw(ctx, t, boost) {
+    const amp = 0.25 + (boost || 0) * 0.6;
+    const freq = 1 + (boost || 0) * 2.5;
+    const a = this.baseAlpha + Math.sin(t * this.speed * freq + this.phase) * amp;
     ctx.globalAlpha = Math.max(0, Math.min(1, a));
     ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.arc(this.x, this.y, this.size * (1 + (boost || 0) * 0.8), 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -334,26 +336,15 @@ class Nebula {
       p.color = origColor;
     });
 
-    // --- Layer 5: Bright star-like core ---
-    const coreR = radius * 0.25;
+    // --- Layer 5: Core (subtle when idle, bright when hovered) ---
+    const coreR = radius * (hovered ? 0.4 : 0.15);
+    const coreAlpha = hovered ? 0.9 : 0.2;
     const g5 = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
-    g5.addColorStop(0, '#fff');
-    g5.addColorStop(0.15, `hsla(${hue},40%,90%,0.9)`);
-    g5.addColorStop(0.5, `hsla(${hue},${sat}%,${light}%,0.3)`);
+    g5.addColorStop(0, hovered ? '#fff' : `hsla(${hue},40%,80%,0.5)`);
+    g5.addColorStop(0.3, `hsla(${hue},40%,${hovered ? 90 : 70}%,${coreAlpha})`);
     g5.addColorStop(1, 'transparent');
     ctx.fillStyle = g5;
     ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, Math.PI * 2); ctx.fill();
-
-    // --- Hover: extra intense core ---
-    if (hovered) {
-      const sparkR = radius * 0.5;
-      const gs = ctx.createRadialGradient(cx, cy, 0, cx, cy, sparkR);
-      gs.addColorStop(0, '#fff');
-      gs.addColorStop(0.2, `hsla(${hue},${sat}%,${light + 25}%,0.8)`);
-      gs.addColorStop(1, 'transparent');
-      ctx.fillStyle = gs;
-      ctx.beginPath(); ctx.arc(cx, cy, sparkR, 0, Math.PI * 2); ctx.fill();
-    }
   }
 
   contains(mx, my) {
@@ -513,8 +504,9 @@ function loop(timestamp) {
   ctx.clearRect(0, 0, W, H);
   ctx.globalAlpha = 1;
 
-  // Stars (always)
-  stars.forEach(s => s.draw(ctx, globalTime));
+  // Stars (sparkle intensely when hovering a nebula)
+  const sparkle = hoveredNebula ? 1 : 0;
+  stars.forEach(s => s.draw(ctx, globalTime, sparkle));
 
   // --- Meteor ---
   if (!meteor && globalTime > METEOR_START) {
