@@ -41,36 +41,34 @@ function animateThemeSwitch(fromDark) {
   const rect = themeToggle.getBoundingClientRect();
   const cx = rect.left + rect.width / 2;
   const cy = rect.top + rect.height / 2;
-  const targetBg = fromDark ? 'var(--bg)' : 'var(--bg)';
-  // Use theme CSS variable colors directly
   const bgColor = fromDark ? '#faf8f5' : '#0d0d14';
 
+  // Position circle centered on the toggle button
+  const base = 80; // small base size
+  el.style.width = base + 'px';
+  el.style.height = base + 'px';
+  el.style.left = (cx - base / 2) + 'px';
+  el.style.top = (cy - base / 2) + 'px';
   el.style.background = bgColor;
-  el.style.display = 'block';
 
   if (fromDark) {
     // Dark → Light: expand from button outward
     el.style.transition = 'none';
-    el.style.clipPath = `circle(0% at ${cx}px ${cy}px)`;
+    el.style.transform = 'scale(0.1)';
     el.offsetHeight; // force reflow
-    el.style.transition = 'clip-path 0.55s cubic-bezier(0.4, 0, 0.2, 1)';
-    el.style.clipPath = `circle(150% at ${cx}px ${cy}px)`;
+    el.style.transition = 'transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)';
+    el.style.transform = 'scale(40)';
   } else {
-    // Light → Dark: collapse toward button inward
+    // Light → Dark: collapse from full screen to button
     el.style.transition = 'none';
-    el.style.clipPath = `circle(150% at ${cx}px ${cy}px)`;
+    el.style.transform = 'scale(40)';
     el.offsetHeight;
-    el.style.transition = 'clip-path 0.55s cubic-bezier(0.4, 0, 0.2, 1)';
-    el.style.clipPath = `circle(0% at ${cx}px ${cy}px)`;
+    el.style.transition = 'transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)';
+    el.style.transform = 'scale(0.1)';
   }
 
-  setTimeout(() => {
-    setTheme(fromDark ? 'light' : 'dark');
-  }, 200);
-
-  setTimeout(() => {
-    el.style.display = 'none';
-  }, 600);
+  // Switch theme halfway through the animation
+  setTimeout(() => setTheme(fromDark ? 'light' : 'dark'), 250);
 }
 
 if (themeToggle) {
