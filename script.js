@@ -120,19 +120,19 @@ class Meteor {
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     const progress = this.elapsed / this.duration;
-    const scale = 0.3 + progress * progress * 4.5;
-    const trailSize = rand(3, 8) * scale;
+    const scale = 0.3 + progress * progress * 8; // max scale ~8.3
+    const trailSize = rand(4, 10) * scale;
     this.trail.push(new Particle(this.x, this.y,
-      rand(-25, 25), rand(-25, 25), rand(0.4, 1.2), '#ff8844', trailSize));
-    if (this.trail.length > 80) this.trail.shift();
+      rand(-35, 35), rand(-35, 35), rand(0.4, 1.4), '#ff8844', trailSize));
+    if (this.trail.length > 120) this.trail.shift();
     const d = dist({x: this.x, y: this.y}, {x: this.targetX, y: this.targetY});
-    if (d < 60) { this.alive = false; return 'impact'; }
+    if (d < 100) { this.alive = false; return 'impact'; }
     return null;
   }
   draw(ctx) {
     const progress = Math.min(1, this.elapsed / this.duration);
-    const scale = 0.3 + progress * progress * 4.5;
-    const glowR = 40 * scale;
+    const scale = 0.3 + progress * progress * 8;
+    const glowR = 50 * scale;
     const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowR);
     grad.addColorStop(0, '#fff');
     grad.addColorStop(0.15, '#ffeebb');
@@ -157,16 +157,16 @@ class GlassShatter {
   constructor(x, y) {
     this.x = x; this.y = y;
     this.lines = [];
-    const count = 40;
+    const count = 70;
     for (let i = 0; i < count; i++) {
       const angle = rand(0, Math.PI * 2);
       this.lines.push({
         angle,
-        len: rand(60, Math.min(W, H) * 0.6),
-        cx: x + rand(-30, 30),
-        cy: y + rand(-30, 30),
-        life: rand(0.3, 0.7),
-        maxLife: rand(0.3, 0.7),
+        len: rand(80, Math.min(W, H) * 0.85),
+        cx: x + rand(-50, 50),
+        cy: y + rand(-50, 50),
+        life: rand(0.3, 0.8),
+        maxLife: rand(0.3, 0.8),
         width: rand(0.5, 2.5),
       });
     }
