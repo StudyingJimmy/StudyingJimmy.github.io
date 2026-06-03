@@ -679,13 +679,15 @@ canvas.addEventListener('dblclick', () => {
   }
   scatteredParticles = [];
 
-  // 4. Ensure every nebula has particles (in case scatter was empty)
+  // 4. Force every nebula particle to be settled at its correct orbit position
   nebulae.forEach(n => {
+    const pos = n.getOrbitPos(globalTime);
     if (!n.hasParticles) {
+      // Direct seed if no particles were assigned
       for (let i = 0; i < 130; i++) {
         const p = new Particle(
-          n.cx + rand(-n.radius, n.radius),
-          n.cy + rand(-n.radius, n.radius),
+          pos.x + rand(-n.radius, n.radius),
+          pos.y + rand(-n.radius, n.radius),
           0, 0, rand(3, 8),
           `hsl(${n.hue},${n.sat}%,${rand(n.light - 15, n.light + 15)}%)`,
           rand(1, 3.5));
@@ -697,6 +699,21 @@ canvas.addEventListener('dblclick', () => {
         n.particles.push(p);
       }
       n.hasParticles = true;
+    } else {
+      // Teleport all gravitating particles to settled orbit positions
+      n.particles.forEach(p => {
+        if (p.gravitating) {
+          p.x = pos.x + rand(-n.radius, n.radius);
+          p.y = pos.y + rand(-n.radius, n.radius);
+          p.vx = 0; p.vy = 0;
+          p.gravitating = false;
+          p.orbitAngle = rand(0, Math.PI * 2);
+          p.orbitRadius = rand(10, n.radius);
+          p.orbitSpeed = rand(0.3, 0.9);
+          p.life = rand(3, 8);
+          p.maxLife = p.life;
+        }
+      });
     }
   });
 
