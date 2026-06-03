@@ -459,9 +459,53 @@ let hoveredNebula = null;
 let mx = 0, my = 0;     // raw mouse position
 let pmx = 0, pmy = 0;   // smoothed parallax offset
 
+// --- Lightning bolt (warp tunnel ambient FX) ----------------
+class Lightning {
+  constructor() {
+    // Start from random edge
+    const edge = randInt(0, 3);
+    if (edge === 0)      { this.sx = rand(0, W); this.sy = 0; }
+    else if (edge === 1) { this.sx = W; this.sy = rand(0, H); }
+    else if (edge === 2) { this.sx = rand(0, W); this.sy = H; }
+    else                 { this.sx = 0; this.sy = rand(0, H); }
+    // Target: random point toward center area
+    this.tx = cx + rand(-200, 200);
+    this.ty = cy + rand(-150, 150);
+    this.segments = this.generate(this.sx, this.sy, this.tx, this.ty, 5);
+    this.life = rand(0.08, 0.2);
+    this.maxLife = this.life;
+    this.alive = true;
+  }
+  generate(x1, y1, x2, y2, depth) {
+    if (depth <= 0) return [{ x1, y1, x2, y2 }];
+    const mx = (x1 + x2) / 2 + rand(-60, 60) * depth;
+    const my = (y1 + y2) / 2 + rand(-60, 60) * depth;
+    return [
+      ...this.generate(x1, y1, mx, my, depth - 1),
+      ...this.generate(mx, my, x2, y2, depth - 1),
+    ];
+  }
+  update(dt) { this.life -= dt; if (this.life <= 0) this.alive = false; }
+  draw(ctx) {
+    const a = Math.max(0, this.life / this.maxLife);
+    // Glow layer
+    ctx.globalAlpha = a * 0.3;
+    ctx.strokeStyle = '#aaccff';
+    ctx.lineWidth = 4;
+    this.segments.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+    // Core layer
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    this.segments.forEach(s => { ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
+  }
+}
+
 const METEOR_START = 0.3;
 const GATHER_START = 2.2;
 const LABELS_SHOW = 4.8;
+let bolts = [];
+let boltTimer = 0;
 
 // --- Init ---------------------------------------------------
 function initStars() {
@@ -593,8 +637,18 @@ function loop(timestamp) {
 
   // Stars: static during animation, warp tunnel in IDLE
   if (phase === Phase.IDLE) {
-    const freeze = hoveredNebula ? 0.08 : 0.75; // time-stop on hover, 25% slower
+    const freeze = hoveredNebula ? 0.08 : 0.75;
     stars.forEach(s => { s.updateWarp(dt * freeze); s.drawWarp(ctx); });
+
+    // Occasional lightning at edges
+    boltTimer -= dt;
+    if (boltTimer <= 0 && !hoveredNebula) {
+      bolts.push(new Lightning());
+      boltTimer = rand(0.6, 2.5);
+      if (bolts.length > 4) bolts.shift();
+    }
+    bolts.forEach(b => { b.update(dt); b.draw(ctx); });
+    bolts = bolts.filter(b => b.alive);
   } else {
     const sparkle = hoveredNebula ? 1 : 0;
     stars.forEach(s => s.draw(ctx, globalTime, sparkle));
