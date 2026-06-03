@@ -225,7 +225,7 @@ class Nebula {
     this.sat = def.sat;
     this.light = def.light;
     this.cx = 0; this.cy = 0;
-    this.radius = 110;
+    this.radius = 140; // larger, galaxy-scale
     this.particles = []; // starts EMPTY — no particles before meteor
     this.index = index;
     // Evenly spaced along the shared orbit
@@ -348,7 +348,7 @@ class Nebula {
   }
 
   contains(mx, my) {
-    return dist({x: mx, y: my}, {x: this.cx, y: this.cy}) < this.radius + 15;
+    return dist({x: mx, y: my}, {x: this.cx, y: this.cy}) < this.radius + 40;
   }
 }
 
@@ -411,7 +411,7 @@ function triggerShake() {
 // --- Colorful Scatter (only appears AFTER meteor impact) ----
 function createColorfulScatter(x, y) {
   const hues = [35, 195, 270, 170, 340, 15, 50, 220, 300, 160];
-  const count = 520;
+  const count = 650;
   for (let i = 0; i < count; i++) {
     const angle = rand(0, Math.PI * 2);
     const speed = rand(60, 560);
@@ -578,7 +578,7 @@ function getPos(e) {
   return { x: e.clientX, y: e.clientY };
 }
 function handleMove(e) {
-  if (phase < Phase.TYPEWRITER) return;
+  if (phase !== Phase.IDLE) return;
   const pos = getPos(e);
   let found = null;
   for (const n of nebulae) {
@@ -592,7 +592,7 @@ function handleMove(e) {
   }
 }
 function handleClick(e) {
-  if (phase < Phase.TYPEWRITER) return;
+  if (phase !== Phase.IDLE) return;
   const pos = getPos(e);
   for (const n of nebulae) {
     if (n.contains(pos.x, pos.y)) { window.location.href = n.url; return; }
