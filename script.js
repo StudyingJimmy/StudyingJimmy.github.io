@@ -802,9 +802,6 @@ function loop(timestamp) {
       boltBurst = 0;
       if (bolts.length > 3) bolts.splice(0, bolts.length - 3);
     }
-    const boltDt = hoveredNebula ? dt * 0.15 : dt;
-    bolts.forEach(b => { b.update(boltDt); b.draw(ctx, colorTemp); });
-    bolts = bolts.filter(b => b.alive);
     if (!hoveredNebula && Math.random() < 0.001) boltBurst = randInt(2, 3);
 
     // --- Energy Burst (center glow only, no outward bolts) ---
@@ -817,6 +814,13 @@ function loop(timestamp) {
   } else {
     const sparkle = hoveredNebula ? 1 : 0;
     stars.forEach(s => s.draw(ctx, globalTime, sparkle));
+  }
+
+  // --- Lightning draw (all post-impact phases) ---
+  if (phase >= Phase.GLASS) {
+    const boltDt = (hoveredNebula && phase === Phase.IDLE) ? dt * 0.15 : dt;
+    bolts.forEach(b => { b.update(boltDt); b.draw(ctx, colorTemp); });
+    bolts = bolts.filter(b => b.alive);
   }
 
   // --- Meteor ---
