@@ -680,9 +680,10 @@ body.cosmic .global-footer {
 
 /* Theme toggle inside nav — overrides fixed positioning */
 .global-nav .theme-toggle {
-  position: static;
+  position: relative;
   margin-left: auto;
   flex-shrink: 0;
+  z-index: auto;
 }
 
 /* Push slide content below nav */
