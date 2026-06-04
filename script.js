@@ -318,7 +318,7 @@ class GlassShatter {
     const count = 55;
     for (let i = 0; i < count; i++) {
       const a = rand(0, Math.PI*2);
-      const d = diag * Math.pow(Math.random(), 2.5) * 1.2;
+      const d = diag * Math.pow(Math.random(), 5) * 1.2;
       seeds.push({x: x + Math.cos(a)*d, y: y + Math.sin(a)*d});
     }
     // Build crack edges with jittered paths
