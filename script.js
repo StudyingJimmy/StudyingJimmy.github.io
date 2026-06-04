@@ -467,7 +467,7 @@ let arcs = [];
 class ArcFlash {
   constructor(x1, y1, x2, y2) {
     this.segs = [];
-    this.buildFractal(x1, y1, x2, y2, 40);
+    this.buildFractal(x1, y1, x2, y2, 30);
     this.life = rand(0.04, 0.12);
     this.maxLife = this.life;
     this.flicker = rand(0.4, 1.0);
@@ -475,10 +475,7 @@ class ArcFlash {
     this.accentHue = rand(0,1) < 0.5 ? 195 : 275;
   }
   buildFractal(x1, y1, x2, y2, displace) {
-    if (displace < 2) {
-      this.segs.push([{x:x1,y:y1},{x:x2,y:y2}]);
-      return;
-    }
+    if (displace < 5) { this.segs.push({x1,y1,x2,y2}); return; }
     let mx = (x1+x2)/2, my = (y1+y2)/2;
     mx += (Math.random()-0.5) * displace;
     my += (Math.random()-0.5) * displace;
@@ -488,17 +485,15 @@ class ArcFlash {
   update(dt) { this.life -= dt; this.flicker = rand(0.3,1.0); if (this.life <= 0) this.alive = false; }
   draw(ctx, temp) {
     const a = Math.max(0, this.life / this.maxLife) * this.flicker;
-    if (a < 0.02) return;
+    if (a < 0.02 || this.segs.length === 0) return;
     const glowCol = temp > 0.5 ? '#fff' : `hsla(${this.accentHue},80%,70%,1)`;
     ctx.lineCap = 'round';
-    this.segs.forEach(seg => {
-      ctx.shadowBlur = 10; ctx.shadowColor = glowCol;
-      ctx.globalAlpha = a * 0.3; ctx.strokeStyle = glowCol; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(seg[0].x, seg[0].y); ctx.lineTo(seg[1].x, seg[1].y); ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = a; ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.6;
-      ctx.beginPath(); ctx.moveTo(seg[0].x, seg[0].y); ctx.lineTo(seg[1].x, seg[1].y); ctx.stroke();
-    });
+    ctx.shadowBlur = 8; ctx.shadowColor = glowCol;
+    ctx.globalAlpha = a * 0.25; ctx.strokeStyle = glowCol; ctx.lineWidth = 2;
+    ctx.beginPath(); this.segs.forEach(s => { ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); }); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = a; ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.6;
+    ctx.beginPath(); this.segs.forEach(s => { ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); }); ctx.stroke();
   }
 }
 
@@ -528,84 +523,61 @@ class Lightning {
       ey = cy + rand(-150, 150);
     }
     // Store all paths (trunk + branches) as arrays of {x,y}
-    this.paths = [];
-    this.buildFractal(sx, sy, ex, ey, Math.max(W, H) * 0.25, true);
-    // Short life with flicker
-    this.life = rand(0.04, 0.45); // wide range: quick flash or slow sweep
+    this.segs = []; // flat array of {x1,y1,x2,y2} for batch rendering
+    this.buildFractal(sx, sy, ex, ey, Math.max(W, H) * 0.18, true);
+    this.life = rand(0.04, 0.45);
     this.maxLife = this.life;
     this.alive = true;
-    this.flicker = rand(0.4, 1.0); // changes each frame
+    this.flicker = rand(0.4, 1.0);
     this.triggeredPulse = !fromCenter;
-    // Random accent hue for this bolt
-    this.accentHue = rand(0,1) < 0.5 ? 195 : 275; // cyan or purple
+    this.accentHue = rand(0,1) < 0.5 ? 195 : 275;
   }
-  // Recursive midpoint displacement
   buildFractal(x1, y1, x2, y2, displace, isTrunk) {
-    if (displace < 1.5) {
-      const seg = [{x: x1, y: y1}, {x: x2, y: y2}];
-      this.paths.push(seg);
-      return seg;
+    if (displace < 4) {
+      this.segs.push({x1, y1, x2, y2}); // flat for batch draw
+      return;
     }
-    let mx = (x1 + x2) / 2;
-    let my = (y1 + y2) / 2;
-    mx += (Math.random() - 0.5) * displace;
-    my += (Math.random() - 0.5) * displace;
-    const left = this.buildFractal(x1, y1, mx, my, displace * 0.55, isTrunk);
-    const right = this.buildFractal(mx, my, x2, y2, displace * 0.55, isTrunk);
-    // Branch: 12-18% chance at each midpoint on trunk
-    if (isTrunk && Math.random() < 0.15 && displace > 8) {
-      const ba = Math.atan2(y2 - y1, x2 - x1) + (rand(0,1)<0.5?-1:1) * rand(0.8, 1.4);
+    let mx = (x1+x2)/2, my = (y1+y2)/2;
+    mx += (Math.random()-0.5) * displace;
+    my += (Math.random()-0.5) * displace;
+    this.buildFractal(x1, y1, mx, my, displace*0.5, isTrunk);
+    this.buildFractal(mx, my, x2, y2, displace*0.5, isTrunk);
+    if (isTrunk && Math.random() < 0.12 && displace > 12) {
+      const ba = Math.atan2(y2-y1, x2-x1) + (rand(0,1)<0.5?-1:1)*rand(0.8,1.4);
       const bl = displace * rand(1.5, 3);
-      const bx = mx + Math.cos(ba) * bl;
-      const by = my + Math.sin(ba) * bl;
-      this.buildFractal(mx, my, bx, by, displace * 0.35, false);
+      this.buildFractal(mx, my, mx+Math.cos(ba)*bl, my+Math.sin(ba)*bl, displace*0.3, false);
     }
-    return left;
   }
   update(dt) {
     this.life -= dt;
     this.flicker = rand(0.3, 1.0);
-    if (this.life <= 0) {
-      this.alive = false;
-      if (this.triggeredPulse) { centerPulse = 1.0; this.triggeredPulse = false; }
-    }
+    if (this.life <= 0) { this.alive = false; if (this.triggeredPulse) { centerPulse = 1.0; this.triggeredPulse = false; } }
   }
   draw(ctx, temp) {
     const a = Math.max(0, this.life / this.maxLife) * this.flicker;
-    if (a < 0.02) return;
+    if (a < 0.02 || this.segs.length === 0) return;
     const isHot = temp > 0.5;
     const glowCol = isHot ? '#ffffff' : `hsla(${this.accentHue},80%,70%,1)`;
-    const midCol = isHot ? '#ffffff' : '#aaddff';
     ctx.lineCap = 'round';
-    this.paths.forEach(seg => {
-      if (seg.length < 2) return;
-      // Outer color edge (cyan/purple)
-      ctx.shadowBlur = 18;
-      ctx.shadowColor = glowCol;
-      ctx.globalAlpha = a * 0.3;
-      ctx.strokeStyle = glowCol;
-      ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.moveTo(seg[0].x, seg[0].y);
-      for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i].x, seg[i].y);
-      ctx.stroke();
-      // Mid glow
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = midCol;
-      ctx.globalAlpha = a * 0.55;
-      ctx.strokeStyle = midCol;
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(seg[0].x, seg[0].y);
-      for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i].x, seg[i].y);
-      ctx.stroke();
-      // White core
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = a;
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 0.8;
-      ctx.beginPath(); ctx.moveTo(seg[0].x, seg[0].y);
-      for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i].x, seg[i].y);
-      ctx.stroke();
-    });
+    // Batch: draw ALL segments in ONE path per layer
+    // Layer 1: glow
+    ctx.shadowBlur = 14; ctx.shadowColor = glowCol;
+    ctx.globalAlpha = a * 0.3; ctx.strokeStyle = glowCol; ctx.lineWidth = 4;
+    ctx.beginPath();
+    this.segs.forEach(s => { ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); });
+    ctx.stroke();
+    // Layer 2: mid
+    ctx.shadowBlur = 5; ctx.shadowColor = '#aaddff';
+    ctx.globalAlpha = a * 0.55; ctx.strokeStyle = '#aaddff'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    this.segs.forEach(s => { ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); });
+    ctx.stroke();
+    // Layer 3: core
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = a; ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    this.segs.forEach(s => { ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); });
+    ctx.stroke();
   }
 }
 
