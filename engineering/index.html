@@ -5,6 +5,427 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>工程问题 — Jimmy Yang</title>
   <link rel="stylesheet" href="../style.css">
+  <style>
+    /* ============================================================
+       Engineering page — decoupled content + collapsible sidebar
+       ============================================================ */
+
+    /* --- Layout --- */
+    .engineering-layout {
+      display: flex;
+      min-height: calc(100vh - 3.5rem);
+      padding-top: 2.8rem;
+    }
+
+    /* ============================================================
+       SIDEBAR
+       ============================================================ */
+    .engineering-sidebar {
+      width: 270px;
+      flex-shrink: 0;
+      position: fixed;
+      top: 2.8rem;
+      left: 0;
+      bottom: 2.5rem;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0.75rem 0;
+      background: var(--bg-elevated);
+      border-right: 1px solid var(--border);
+      z-index: 50;
+      transition: width 0.3s ease, background 0.4s ease, border-color 0.4s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .engineering-sidebar::-webkit-scrollbar { width: 4px; }
+    .engineering-sidebar::-webkit-scrollbar-thumb {
+      background: var(--border-strong); border-radius: 2px;
+    }
+
+    /* Collapsed sidebar */
+    .engineering-sidebar.collapsed {
+      width: 44px;
+    }
+    .engineering-sidebar.collapsed .sidebar-section-title,
+    .engineering-sidebar.collapsed .cat-label,
+    .engineering-sidebar.collapsed .cat-arrow,
+    .engineering-sidebar.collapsed .cat-count,
+    .engineering-sidebar.collapsed .sidebar-category-items,
+    .engineering-sidebar.collapsed .sidebar-toggle-label {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+    .engineering-sidebar.collapsed .sidebar-category-header {
+      justify-content: center;
+      padding: 0.55rem 0;
+    }
+    .engineering-sidebar.collapsed .sidebar-toggle {
+      justify-content: center;
+    }
+
+    /* --- Sidebar toggle button --- */
+    .sidebar-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 0.85rem;
+      margin: 0 0.5rem 0.5rem;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      transition: all 0.2s;
+      user-select: none;
+      border: none;
+      background: none;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .sidebar-toggle:hover {
+      color: var(--accent);
+      background: var(--accent-subtle);
+    }
+    .sidebar-toggle .toggle-icon {
+      font-size: 0.85rem;
+      transition: transform 0.3s ease;
+      flex-shrink: 0;
+    }
+    .engineering-sidebar.collapsed .sidebar-toggle .toggle-icon {
+      transform: rotate(180deg);
+    }
+
+    .sidebar-section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      padding: 0.3rem 0.85rem 0.5rem;
+      white-space: nowrap;
+    }
+
+    /* --- Category --- */
+    .sidebar-category { margin-bottom: 0.1rem; }
+
+    .sidebar-category-header {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.55rem 0.85rem;
+      cursor: pointer;
+      border-radius: 6px;
+      margin: 0 0.5rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      transition: all 0.2s;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .sidebar-category-header:hover { background: var(--accent-subtle); color: var(--accent); }
+    .sidebar-category-header .cat-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .sidebar-category-header .cat-label { flex: 1; }
+    .sidebar-category-header .cat-arrow {
+      font-size: 0.65rem; color: var(--text-muted);
+      transition: transform 0.25s ease; flex-shrink: 0;
+    }
+    .sidebar-category.open > .sidebar-category-header .cat-arrow {
+      transform: rotate(90deg);
+    }
+    .sidebar-category-header .cat-count {
+      font-size: 0.75rem; color: var(--text-muted);
+      background: var(--tag-bg); padding: 0.1rem 0.45rem;
+      border-radius: 10px; flex-shrink: 0;
+    }
+
+    /* Sub items */
+    .sidebar-category-items {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.35s ease;
+    }
+    .sidebar-category.open > .sidebar-category-items { max-height: 600px; }
+
+    .sidebar-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.35rem 0.85rem 0.35rem 2.2rem;
+      margin: 0 0.5rem;
+      font-size: 0.92rem; color: var(--text-secondary);
+      cursor: pointer; border-radius: 4px;
+      transition: all 0.15s; text-decoration: none;
+      border: none; background: none;
+      width: calc(100% - 1rem); text-align: left;
+      font-family: inherit; white-space: nowrap;
+    }
+    .sidebar-item:hover { color: var(--accent); background: var(--accent-subtle); }
+    .sidebar-item.active { color: var(--accent); background: var(--accent-subtle); font-weight: 500; }
+    .sidebar-item .item-count {
+      font-size: 0.75rem; color: var(--text-muted);
+      background: var(--tag-bg); padding: 0.1rem 0.4rem; border-radius: 10px;
+    }
+    .sidebar-item.active .item-count { background: var(--accent-glow); color: var(--accent); }
+
+    /* Category placeholder (no subcategories) */
+    .sidebar-placeholder {
+      padding: 0.35rem 0.85rem 0.35rem 2.2rem;
+      margin: 0 0.5rem;
+      font-size: 0.85rem; color: var(--text-muted);
+      font-style: italic; white-space: nowrap;
+    }
+
+    /* ============================================================
+       MAIN CONTENT
+       ============================================================ */
+    .engineering-main {
+      flex: 1;
+      margin-left: 270px;
+      padding: 2rem 2.5rem;
+      transition: margin-left 0.3s ease;
+      display: flex;
+      justify-content: center;
+    }
+    .engineering-sidebar.collapsed ~ .engineering-main {
+      margin-left: 44px;
+    }
+
+    .content-wrapper {
+      width: 100%;
+      max-width: 780px;
+    }
+
+    /* Section header */
+    .section-header {
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.65rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-header .breadcrumb {
+      font-size: 0.9rem; color: var(--text-muted);
+      margin-bottom: 0.25rem; letter-spacing: 0.03em;
+      display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;
+    }
+    .section-header .breadcrumb a {
+      color: var(--text-muted); text-decoration: none;
+    }
+    .section-header .breadcrumb a:hover { color: var(--accent); }
+    .section-header .breadcrumb .sep { opacity: 0.4; }
+    .section-header .breadcrumb .current { color: var(--accent); }
+    .section-header h2 {
+      font-family: Georgia, 'Times New Roman', 'KaiTi', serif;
+      font-size: 1.75rem; color: var(--text-primary);
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    /* --- Category intro --- */
+    .category-intro {
+      padding: 1rem 1.25rem; margin-bottom: 1.25rem;
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: 8px; font-size: 1rem;
+      color: var(--text-secondary); line-height: 1.7;
+    }
+
+    /* --- Article list (cards) --- */
+    .article-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .article-card {
+      padding: 1rem 1.25rem;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .article-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+    .article-card .card-top {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 1rem; margin-bottom: 0.3rem;
+    }
+    .article-card h3 { font-size: 1.15rem; font-weight: 600; color: var(--text-primary); margin: 0; line-height: 1.35; }
+    .article-card .card-meta { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.6rem; }
+    .article-card .card-meta .meta-sep { width: 3px; height: 3px; border-radius: 50%; background: var(--text-muted); opacity: 0.5; }
+    .article-card .card-desc { font-size: 1rem; color: var(--text-secondary); line-height: 1.6; }
+    .article-card .card-tags { margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.25rem; }
+    .article-card .card-tags .tag {
+      font-size: 0.75rem; padding: 0.15rem 0.5rem;
+      background: var(--tag-bg); color: var(--tag-text);
+      border: 1px solid var(--border); border-radius: 3px;
+    }
+
+    /* Status badges */
+    .status-badge {
+      flex-shrink: 0; font-size: 0.75rem; padding: 0.18rem 0.55rem;
+      border-radius: 10px; font-weight: 500; letter-spacing: 0.03em;
+    }
+    .status-done     { background: rgba(76, 175, 80, 0.12); color: #4caf50; }
+    .status-progress { background: rgba(255, 152, 0, 0.12); color: #ff9800; }
+    .status-todo     { background: var(--tag-bg); color: var(--text-muted); }
+
+    /* ============================================================
+       ARTICLE VIEW (rendered markdown)
+       ============================================================ */
+    .article-view {
+      animation: fadeUp 0.35s ease both;
+    }
+    .article-view .back-link {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-size: 0.95rem; color: var(--text-muted); cursor: pointer;
+      margin-bottom: 1.25rem; border: none; background: none;
+      font-family: inherit; padding: 0;
+      transition: color 0.2s;
+    }
+    .article-view .back-link:hover { color: var(--accent); }
+
+    .article-view .article-meta {
+      display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+      margin-bottom: 1.25rem; padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .article-view .article-date { font-size: 0.92rem; color: var(--text-muted); }
+
+    /* Rendered markdown body */
+    .md-body { line-height: 1.85; font-size: 1.05rem; }
+    .md-body h1 { font-family: Georgia, 'Times New Roman', 'KaiTi', serif; font-size: 1.85rem; margin: 1.5rem 0 0.75rem; color: var(--text-primary); }
+    .md-body h2 { font-family: Georgia, 'Times New Roman', 'KaiTi', serif; font-size: 1.5rem; margin: 1.5rem 0 0.6rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); color: var(--text-primary); }
+    .md-body h3 { font-size: 1.25rem; margin: 1.2rem 0 0.4rem; color: var(--text-primary); }
+    .md-body p { margin: 0.6rem 0; color: var(--text-secondary); }
+    .md-body strong { color: var(--text-primary); }
+    .md-body a { color: var(--accent); }
+    .md-body ul, .md-body ol { margin: 0.5rem 0; padding-left: 1.5rem; color: var(--text-secondary); }
+    .md-body li { margin: 0.25rem 0; }
+    .md-body li::marker { color: var(--accent); }
+    .md-body code {
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 0.9em; padding: 0.15em 0.4em;
+      background: var(--code-bg); color: var(--code-text);
+      border-radius: 3px;
+    }
+    .md-body pre {
+      margin: 0.75rem 0; padding: 1rem 1.2rem;
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: 6px; overflow-x: auto;
+      font-size: 0.95rem; line-height: 1.6;
+    }
+    .md-body pre code {
+      background: none; padding: 0; color: var(--text-secondary);
+      font-size: inherit;
+    }
+    .md-body table {
+      width: 100%; border-collapse: collapse; margin: 0.75rem 0;
+      font-size: 1rem;
+    }
+    .md-body th, .md-body td {
+      padding: 0.45rem 0.75rem; text-align: left;
+      border: 1px solid var(--border);
+    }
+    .md-body th { background: var(--bg-elevated); font-weight: 600; color: var(--text-primary); }
+    .md-body td { color: var(--text-secondary); }
+    .md-body hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+    .md-body blockquote {
+      margin: 0.75rem 0; padding: 0.5rem 1rem;
+      border-left: 3px solid var(--accent); color: var(--text-secondary);
+      background: var(--accent-subtle); border-radius: 0 4px 4px 0;
+    }
+    .md-body img { max-width: 100%; border-radius: 6px; }
+    .md-body input[type="checkbox"] { margin-right: 0.4rem; accent-color: var(--accent); }
+
+    /* --- Empty / loading states --- */
+    .empty-state {
+      text-align: center; padding: 3.5rem 1.5rem; color: var(--text-muted);
+    }
+    .empty-state .empty-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+    .empty-state h3 { font-size: 1.3rem; color: var(--text-secondary); margin-bottom: 0.4rem; }
+    .empty-state p { font-size: 1rem; max-width: 380px; margin: 0 auto; line-height: 1.6; }
+
+    .loading { text-align: center; padding: 3rem; color: var(--text-muted); font-size: 1rem; }
+    .loading .dot-pulse::after {
+      content: ''; animation: dots 1.2s steps(3, end) infinite;
+    }
+    @keyframes dots {
+      0%   { content: ''; }
+      33%  { content: '.'; }
+      66%  { content: '..'; }
+      100% { content: '...'; }
+    }
+
+    /* ============================================================
+       MAIN LAYOUT (section filter + content)
+       ============================================================ */
+    .main-layout {
+      display: flex;
+      gap: 1.5rem;
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* --- Section filter panel --- */
+    .section-filter {
+      width: 130px;
+      flex-shrink: 0;
+    }
+    .section-filter-inner {
+      position: sticky;
+      top: 3.5rem;
+    }
+    .section-filter-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .section-filter-item {
+      display: block;
+      width: 100%;
+      padding: 0.35rem 0.5rem;
+      margin-bottom: 0.15rem;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: 4px;
+      border: none;
+      background: none;
+      font-family: inherit;
+      text-align: left;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .section-filter-item:hover {
+      color: var(--accent);
+      background: var(--accent-subtle);
+    }
+    .section-filter-item.active {
+      color: var(--accent);
+      background: var(--accent-subtle);
+      font-weight: 500;
+    }
+
+    /* ============================================================
+       RESPONSIVE
+       ============================================================ */
+    @media (max-width: 768px) {
+      .engineering-sidebar {
+        position: relative; width: 100%; top: auto; bottom: auto;
+        border-right: none; border-bottom: 1px solid var(--border);
+        padding: 0.5rem; flex-shrink: 1;
+      }
+      .engineering-sidebar.collapsed { width: 100%; }
+      .engineering-layout { flex-direction: column; }
+      .engineering-main { margin-left: 0 !important; padding: 1rem; }
+      .content-wrapper { max-width: 100%; }
+      .section-filter { display: none; }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 <body>
   <nav class="global-nav">
@@ -21,19 +442,38 @@
       <span class="theme-icon-light">☾</span>
     </button>
   </nav>
-  <main class="sub-page" style="padding-top:3rem;">
 
-    <section class="content-block">
-      <p>按岗位分类的业界问题调研。每个分类下按时间更新，记录典型问题案例与解决方案。目标岗位方向包括测试、运维、后端等。</p>
-    </section>
+  <div class="engineering-layout" id="layout">
 
-    <div class="placeholder">
-      <div class="placeholder-icon">🔍</div>
-      <h2>调研进行中</h2>
-      <p>正在收集和整理各岗位的典型工程问题。</p>
-    </div>
+    <!-- ====== Sidebar ====== -->
+    <aside class="engineering-sidebar" id="sidebar">
+      <button class="sidebar-toggle" id="sidebarToggle" title="收起/展开侧边栏">
+        <span class="toggle-icon">◀</span>
+        <span class="sidebar-toggle-label">收起侧边栏</span>
+      </button>
+      <!-- sidebar built dynamically from manifest.json -->
+      <div id="sidebarContent">
+        <!-- Built dynamically from manifest.json -->
+      </div>
+    </aside>
 
-  </main>
+    <!-- ====== Main Content ====== -->
+    <main class="engineering-main" id="mainContent">
+      <div class="main-layout" id="mainLayout">
+        <div class="section-filter" id="sectionFilter" style="display:none;">
+          <div class="section-filter-inner" id="sectionFilterInner">
+            <!-- Built dynamically -->
+          </div>
+        </div>
+        <div class="content-wrapper" id="contentWrapper" style="flex:1;">
+          <div class="loading">
+            <span class="dot-pulse">加载中</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </div>
 
   <footer class="global-footer">
     <span class="footer-motto">No pain, no gain.</span>
@@ -41,5 +481,673 @@
   </footer>
 
   <script src="../script.js"></script>
+  <script>
+  /* ============================================================
+     Engineering page — manifest-driven sidebar + markdown viewer
+     ============================================================ */
+
+  // --- State ---
+  let manifest = null;
+  let currentView = 'list';        // 'list' | 'article'
+  let currentCategory = 'testing';
+  let currentSubcategory = 'api';
+  let currentSection = null;       // null = show all
+  let currentArticle = null;
+
+  const SIDEBAR_STORAGE_KEY = 'engineering-sidebar-collapsed';
+
+  // ============================================================
+  //  SIDEBAR COLLAPSE
+  // ============================================================
+  const sidebar = document.getElementById('sidebar');
+  const toggleBtn = document.getElementById('sidebarToggle');
+  const toggleLabel = toggleBtn.querySelector('.sidebar-toggle-label');
+  const toggleIcon = toggleBtn.querySelector('.toggle-icon');
+
+  function getSidebarCollapsed() {
+    return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true';
+  }
+  function setSidebarCollapsed(collapsed) {
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, collapsed ? 'true' : 'false');
+  }
+
+  function applySidebarState(collapsed) {
+    if (collapsed) {
+      sidebar.classList.add('collapsed');
+      toggleLabel.textContent = '';
+      toggleIcon.textContent = '▶';
+    } else {
+      sidebar.classList.remove('collapsed');
+      toggleLabel.textContent = '收起侧边栏';
+      toggleIcon.textContent = '◀';
+    }
+  }
+
+  const sidebarCollapsed = getSidebarCollapsed();
+  applySidebarState(sidebarCollapsed);
+
+  toggleBtn.addEventListener('click', () => {
+    const nowCollapsed = !sidebar.classList.contains('collapsed');
+    applySidebarState(nowCollapsed);
+    setSidebarCollapsed(nowCollapsed);
+  });
+
+  // ============================================================
+  //  LOAD MANIFEST
+  // ============================================================
+  async function loadManifest() {
+    const resp = await fetch('assets/manifest.json');
+    if (!resp.ok) throw new Error(`Failed to load manifest: ${resp.status}`);
+    manifest = await resp.json();
+  }
+
+  // ============================================================
+  //  BUILD SIDEBAR
+  // ============================================================
+  function buildSidebar() {
+    const container = document.getElementById('sidebarContent');
+    let html = '';
+
+    manifest.categories.forEach(cat => {
+      const totalCount = countCategoryArticles(cat);
+      const isOpen = (cat.id === currentCategory);
+      const hasSubs = cat.subcategories && cat.subcategories.length > 0;
+
+      html += `<div class="sidebar-category${isOpen ? ' open' : ''}" data-category="${cat.id}">`;
+      html += `<div class="sidebar-category-header" data-toggle="${cat.id}">`;
+      html += `<span class="cat-icon">${cat.icon}</span>`;
+      html += `<span class="cat-label">${cat.name || cat.id}</span>`;
+      html += `<span class="cat-count">${totalCount}</span>`;
+      if (hasSubs) html += `<span class="cat-arrow">▶</span>`;
+      html += `</div>`;
+
+      if (hasSubs) {
+        html += `<div class="sidebar-category-items">`;
+        cat.subcategories.forEach(sub => {
+          const subCount = sub.articles ? sub.articles.length : 0;
+          const isActive = (cat.id === currentCategory && sub.id === currentSubcategory && currentView === 'list');
+          html += `<button class="sidebar-item${isActive ? ' active' : ''}"
+            data-category="${cat.id}" data-subcategory="${sub.id}">
+            ${sub.name || sub.id} <span class="item-count">${subCount}</span>
+          </button>`;
+        });
+        html += `</div>`;
+      } else if (!hasSubs && (!cat.articles || cat.articles.length === 0)) {
+        // No subcategories and no articles — placeholder
+        html += `<div class="sidebar-category-items">`;
+        html += `<div class="sidebar-placeholder">Coming soon...</div>`;
+        html += `</div>`;
+      } else {
+        // No subcategories, but has articles — nothing extra to render here
+      }
+
+      html += `</div>`;
+    });
+
+    container.innerHTML = html;
+    bindSidebarEvents();
+  }
+
+  function countCategoryArticles(cat) {
+    let count = cat.articles ? cat.articles.length : 0;
+    if (cat.subcategories) {
+      cat.subcategories.forEach(sub => {
+        count += sub.articles ? sub.articles.length : 0;
+      });
+    }
+    return count;
+  }
+
+  function bindSidebarEvents() {
+    // Category header click → toggle expand
+    document.querySelectorAll('.sidebar-category-header[data-toggle]').forEach(header => {
+      header.addEventListener('click', function(e) {
+        const catId = this.dataset.toggle;
+        const catEl = this.closest('.sidebar-category');
+        const hasSubs = catEl.querySelectorAll('.sidebar-item[data-subcategory]').length > 0;
+
+        if (hasSubs) {
+          catEl.classList.toggle('open');
+        }
+
+        // Navigate to this category
+        const cat = manifest.categories.find(c => c.id === catId);
+        if (cat) {
+          if (cat.subcategories && cat.subcategories.length > 0) {
+            // Go to first subcategory
+            const firstSub = cat.subcategories[0];
+            navigateToListResetSection(catId, firstSub.id);
+          } else {
+            // No subcategories — show category directly
+            navigateToListResetSection(catId, null);
+          }
+        }
+      });
+    });
+
+    // Subcategory item click → show article list
+    document.querySelectorAll('.sidebar-item[data-subcategory]').forEach(item => {
+      item.addEventListener('click', function(e) {
+        const catId = this.dataset.category;
+        const subId = this.dataset.subcategory;
+        navigateToListResetSection(catId, subId);
+      });
+    });
+  }
+
+  // ============================================================
+  //  NAVIGATION
+  // ============================================================
+  function navigateToList(category, subcategory) {
+    currentView = 'list';
+    currentCategory = category;
+    currentSubcategory = subcategory;
+    currentArticle = null;
+    updateSidebarActive();
+    renderArticleList();
+    updateHash();
+  }
+
+  function navigateToListResetSection(category, subcategory) {
+    currentSection = null;  // reset section filter on sidebar click
+    navigateToList(category, subcategory);
+  }
+
+  function navigateToArticle(category, subcategory, article) {
+    currentView = 'article';
+    currentCategory = category;
+    currentSubcategory = subcategory;
+    currentArticle = article;
+    updateSidebarActive();
+    renderArticleView(article);
+    updateHash();
+  }
+
+  function updateSidebarActive() {
+    document.querySelectorAll('.sidebar-item').forEach(el => {
+      const elCat = el.dataset.category;
+      const elSub = el.dataset.subcategory;
+      if (elCat === currentCategory && elSub === currentSubcategory && currentView === 'list') {
+        el.classList.add('active');
+      } else {
+        el.classList.remove('active');
+      }
+    });
+
+    // Ensure current category is open
+    document.querySelectorAll('.sidebar-category').forEach(el => {
+      if (el.dataset.category === currentCategory) {
+        el.classList.add('open');
+      }
+    });
+  }
+
+  function updateHash() {
+    let hash = currentCategory;
+    if (currentSubcategory) hash += '/' + currentSubcategory;
+    if (currentSection) hash += '/~' + currentSection;
+    if (currentArticle) hash += '/' + currentArticle.id;
+    history.replaceState(null, '', '#' + hash);
+  }
+
+  function parseHash() {
+    const hash = location.hash.replace('#', '');
+    if (!hash) return null;
+    const parts = hash.split('/');
+    let section = null;
+    let articleId = null;
+    // Walk through remaining parts to find section (~prefix) and articleId
+    for (let i = 2; i < parts.length; i++) {
+      if (parts[i].startsWith('~')) {
+        section = parts[i].slice(1);
+      } else {
+        articleId = parts[i];
+      }
+    }
+    return {
+      category: parts[0] || null,
+      subcategory: parts[1] || null,
+      section: section,
+      articleId: articleId,
+    };
+  }
+
+  // ============================================================
+  //  SECTION FILTER
+  // ============================================================
+  function buildSectionFilter(sections) {
+    const filterEl = document.getElementById('sectionFilter');
+    const innerEl = document.getElementById('sectionFilterInner');
+
+    if (!sections || sections.length === 0) {
+      filterEl.style.display = 'none';
+      return;
+    }
+
+    filterEl.style.display = 'block';
+
+    let html = `<div class="section-filter-title">内容分类</div>`;
+    html += `<button class="section-filter-item${currentSection === null ? ' active' : ''}" data-section="">全部</button>`;
+    sections.forEach(sec => {
+      html += `<button class="section-filter-item${currentSection === sec ? ' active' : ''}" data-section="${sec}">${sec}</button>`;
+    });
+
+    innerEl.innerHTML = html;
+
+    // Bind click events
+    innerEl.querySelectorAll('.section-filter-item').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const sec = this.dataset.section;
+        currentSection = sec || null;
+        renderArticleList();
+        updateHash();
+      });
+    });
+  }
+
+  // ============================================================
+  //  RENDER: ARTICLE LIST (cards)
+  // ============================================================
+  function renderArticleList() {
+    const wrapper = document.getElementById('contentWrapper');
+    const cat = manifest.categories.find(c => c.id === currentCategory);
+    if (!cat) { wrapper.innerHTML = '<div class="empty-state"><p>分类未找到</p></div>'; return; }
+
+    // Find the subcategory or use category-level articles
+    let articles = [];
+    let description = '';
+    let displayTitle = cat.name || currentCategory;
+    let sub = null;
+
+    if (currentSubcategory && cat.subcategories) {
+      sub = cat.subcategories.find(s => s.id === currentSubcategory);
+      if (sub) {
+        articles = sub.articles || [];
+        description = sub.description || '';
+        displayTitle = sub.name || currentSubcategory;
+      }
+    } else {
+      articles = cat.articles || [];
+      description = cat.description || '';
+    }
+
+    const statusMap = { done: '已完成', progress: '进行中', todo: '待调研' };
+
+    // Build section filter
+    const target = sub || cat;
+    const sections = target.sections || [];
+    buildSectionFilter(sections);
+
+    // Filter by section
+    let filteredArticles = articles;
+    if (currentSection && sections.includes(currentSection)) {
+      filteredArticles = articles.filter(a => a.section === currentSection);
+    }
+
+    let html = '';
+
+    // Header
+    html += `<div class="section-header">`;
+    html += `<div class="breadcrumb">`;
+    html += `<a href="#" data-nav-cat="${cat.id}">${cat.name || cat.id}</a>`;
+    if (currentSubcategory && sub) {
+      html += `<span class="sep">/</span>`;
+      html += `<span class="current">${sub.name || currentSubcategory}</span>`;
+    }
+    if (currentSection) {
+      html += `<span class="sep">/</span>`;
+      html += `<span class="current">${currentSection}</span>`;
+    }
+    html += `</div>`;
+    html += `<h2>${displayTitle} <span style="font-size:0.7rem;font-weight:400;color:var(--text-muted);">${filteredArticles.length} 篇</span></h2>`;
+    html += `</div>`;
+
+    // Description
+    if (description) {
+      html += `<div class="category-intro">${description}</div>`;
+    }
+
+    // Article cards or empty
+    if (filteredArticles.length === 0) {
+      html += `<div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <h3>暂无内容</h3>
+        <p>该分类下的问题调研即将更新，敬请期待。</p>
+      </div>`;
+    } else {
+      html += `<div class="article-list">`;
+      filteredArticles.forEach(a => {
+        html += `
+          <div class="article-card" data-article-id="${a.id}" data-cat="${currentCategory}" data-sub="${currentSubcategory || ''}">
+            <div class="card-top">
+              <h3>${a.title}</h3>
+              <span class="status-badge status-${a.status}">${statusMap[a.status]}</span>
+            </div>
+            <div class="card-meta">
+              <span>📅 ${a.date}</span>
+            </div>
+            <div class="card-tags">
+              ${(a.tags || []).map(t => `<span class="tag">${t}</span>`).join('')}
+            </div>
+          </div>`;
+      });
+      html += `</div>`;
+    }
+
+    wrapper.innerHTML = html;
+
+    // Bind card clicks
+    wrapper.querySelectorAll('.article-card').forEach(card => {
+      card.addEventListener('click', function() {
+        const articleId = this.dataset.articleId;
+        const catId = this.dataset.cat;
+        const subId = this.dataset.sub || null;
+        const art = findArticle(catId, subId, articleId);
+        if (art) navigateToArticle(catId, subId, art);
+      });
+    });
+
+    // Bind breadcrumb nav
+    wrapper.querySelectorAll('[data-nav-cat]').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const catId = this.dataset.navCat;
+        const c = manifest.categories.find(x => x.id === catId);
+        if (c && c.subcategories && c.subcategories.length > 0) {
+          navigateToList(catId, c.subcategories[0].id);
+        } else {
+          navigateToList(catId, null);
+        }
+      });
+    });
+  }
+
+  function findArticle(categoryId, subcategoryId, articleId) {
+    const cat = manifest.categories.find(c => c.id === categoryId);
+    if (!cat) return null;
+
+    let articles = [];
+    if (subcategoryId && cat.subcategories) {
+      const sub = cat.subcategories.find(s => s.id === subcategoryId);
+      if (sub) articles = sub.articles || [];
+    } else {
+      articles = cat.articles || [];
+    }
+    return articles.find(a => a.id === articleId) || null;
+  }
+
+  // ============================================================
+  //  RENDER: ARTICLE VIEW (markdown)
+  // ============================================================
+  async function renderArticleView(article) {
+    const wrapper = document.getElementById('contentWrapper');
+    const filterEl = document.getElementById('sectionFilter');
+    const statusMap = { done: '已完成', progress: '进行中', todo: '待调研' };
+
+    // Hide section filter when viewing article
+    if (filterEl) filterEl.style.display = 'none';
+
+    // Show loading
+    wrapper.innerHTML = `<div class="loading"><span class="dot-pulse">加载文章</span></div>`;
+
+    try {
+      const resp = await fetch(`assets/${article.file}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const md = await resp.text();
+      const htmlBody = renderMarkdown(md);
+
+      let html = `<div class="article-view">`;
+
+      // Back link
+      html += `<button class="back-link" id="backToList">← 返回列表</button>`;
+
+      // Article header
+      html += `<h1 style="font-family:Georgia,'Times New Roman','KaiTi',serif;font-size:1.5rem;color:var(--text-primary);">${article.title}</h1>`;
+      html += `<div class="article-meta">`;
+      html += `<span style="font-size:0.78rem;color:var(--text-muted);">📅 ${article.date}</span>`;
+      html += `<span class="status-badge status-${article.status}">${statusMap[article.status]}</span>`;
+      if (article.tags && article.tags.length > 0) {
+        html += article.tags.map(t => `<span class="tag">${t}</span>`).join('');
+      }
+      html += `</div>`;
+
+      // Rendered markdown body
+      html += `<div class="md-body">${htmlBody}</div>`;
+      html += `</div>`;
+
+      wrapper.innerHTML = html;
+
+      // Bind back button
+      const backBtn = document.getElementById('backToList');
+      if (backBtn) {
+        backBtn.addEventListener('click', () => {
+          navigateToList(currentCategory, currentSubcategory);
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load article:', err);
+      wrapper.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h3>加载失败</h3>
+          <p>无法加载文章内容：${err.message}</p>
+          <button class="back-link" style="margin-top:1rem;" onclick="navigateToList('${currentCategory}','${currentSubcategory||''}')">← 返回列表</button>
+        </div>`;
+    }
+  }
+
+  // ============================================================
+  //  MARKDOWN RENDERER (lightweight, no dependencies)
+  // ============================================================
+  function renderMarkdown(md) {
+    // Strip YAML frontmatter
+    md = md.replace(/^---[\s\S]*?---\n*/, '');
+
+    const lines = md.split('\n');
+    let html = '';
+    let i = 0;
+    let inList = false;
+
+    while (i < lines.length) {
+      let line = lines[i];
+
+      // Blank line
+      if (line.trim() === '') {
+        if (inList) { html += '</ul>\n'; inList = false; }
+        i++;
+        continue;
+      }
+
+      // Fenced code block
+      if (line.trim().startsWith('```')) {
+        if (inList) { html += '</ul>\n'; inList = false; }
+        const lang = line.trim().slice(3).trim();
+        html += `<pre><code${lang ? ` class="language-${lang}"` : ''}>`;
+        i++;
+        while (i < lines.length) {
+          if (lines[i].trim() === '```') break;
+          html += escapeHtml(lines[i]) + '\n';
+          i++;
+        }
+        html += '</code></pre>\n';
+        i++; // skip closing ```
+        continue;
+      }
+
+      // Table
+      if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+        if (inList) { html += '</ul>\n'; inList = false; }
+        const rows = [];
+        while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+          rows.push(lines[i].trim());
+          i++;
+        }
+        // Skip separator row (|---|---|)
+        const dataRows = rows.filter(r => !/^\|[\s\-:|]+\|$/.test(r));
+        if (dataRows.length > 0) {
+          html += '<table>\n';
+          dataRows.forEach((row, ri) => {
+            const cells = row.split('|').filter(c => c.trim() !== '');
+            const tag = ri === 0 ? 'th' : 'td';
+            html += '<tr>';
+            cells.forEach(c => {
+              html += `<${tag}>${processInline(c.trim())}</${tag}>`;
+            });
+            html += '</tr>\n';
+          });
+          html += '</table>\n';
+        }
+        continue;
+      }
+
+      // Header
+      const hMatch = line.match(/^(#{1,3})\s+(.+)/);
+      if (hMatch) {
+        if (inList) { html += '</ul>\n'; inList = false; }
+        const level = hMatch[1].length;
+        html += `<h${level}>${processInline(hMatch[2])}</h${level}>\n`;
+        i++; continue;
+      }
+
+      // Horizontal rule
+      if (/^[-*_]{3,}\s*$/.test(line.trim())) {
+        if (inList) { html += '</ul>\n'; inList = false; }
+        html += '<hr>\n';
+        i++; continue;
+      }
+
+      // Blockquote
+      if (line.trim().startsWith('> ')) {
+        if (inList) { html += '</ul>\n'; inList = false; }
+        const qLines = [];
+        while (i < lines.length && lines[i].trim().startsWith('> ')) {
+          qLines.push(lines[i].trim().replace(/^>\s?/, ''));
+          i++;
+        }
+        html += `<blockquote>${qLines.map(l => processInline(l)).join('<br>')}</blockquote>\n`;
+        continue;
+      }
+
+      // Unordered list / task list
+      const ulMatch = line.match(/^(\s*)[-*]\s+(.+)/);
+      if (ulMatch) {
+        if (!inList) { html += '<ul>\n'; inList = true; }
+        const content = ulMatch[2];
+        // Task list
+        if (/^\[ \]\s/.test(content)) {
+          html += `<li><input type="checkbox" disabled> ${processInline(content.replace(/^\[ \]\s/, ''))}</li>\n`;
+        } else if (/^\[x\]\s/i.test(content)) {
+          html += `<li><input type="checkbox" checked disabled> ${processInline(content.replace(/^\[x\]\s/i, ''))}</li>\n`;
+        } else {
+          html += `<li>${processInline(content)}</li>\n`;
+        }
+        i++; continue;
+      }
+
+      // Regular paragraph
+      if (inList) { html += '</ul>\n'; inList = false; }
+      const paraLines = [];
+      while (i < lines.length && lines[i].trim() !== '' &&
+             !lines[i].trim().startsWith('```') &&
+             !lines[i].trim().startsWith('|') &&
+             !lines[i].match(/^(#{1,3})\s+/) &&
+             !lines[i].match(/^(\s*)[-*]\s+/) &&
+             !lines[i].trim().startsWith('> ') &&
+             !/^[-*_]{3,}\s*$/.test(lines[i].trim())) {
+        paraLines.push(lines[i]);
+        i++;
+      }
+      if (paraLines.length > 0) {
+        html += '<p>' + paraLines.map(l => processInline(l)).join(' ') + '</p>\n';
+      }
+    }
+
+    if (inList) { html += '</ul>\n'; }
+    return html;
+  }
+
+  function processInline(text) {
+    // Images (before links to avoid conflict)
+    text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+    // Links
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    // Bold
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Inline code
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    return text;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // ============================================================
+  //  INIT
+  // ============================================================
+  async function init() {
+    try {
+      await loadManifest();
+      buildSidebar();
+
+      // Parse URL hash or show default
+      const hash = parseHash();
+      if (hash && hash.category) {
+        const cat = manifest.categories.find(c => c.id === hash.category);
+        if (cat) {
+          if (hash.articleId) {
+            // Deep link to article
+            const subId = hash.subcategory || (cat.subcategories && cat.subcategories.length > 0 ? cat.subcategories[0].id : null);
+            const art = findArticle(hash.category, subId, hash.articleId);
+            if (art) {
+              currentCategory = hash.category;
+              currentSubcategory = subId;
+              navigateToArticle(hash.category, subId, art);
+              return;
+            }
+          }
+          if (hash.subcategory) {
+            const sub = cat.subcategories ? cat.subcategories.find(s => s.id === hash.subcategory) : null;
+            if (sub) {
+              currentSection = hash.section || null;
+              navigateToList(hash.category, hash.subcategory);
+              return;
+            }
+          }
+          // Fallback: show first subcategory or category
+          currentSection = hash.section || null;
+          if (cat.subcategories && cat.subcategories.length > 0) {
+            navigateToList(cat.id, cat.subcategories[0].id);
+          } else {
+            navigateToList(cat.id, null);
+          }
+          return;
+        }
+      }
+
+      // Default: first category, first subcategory
+      if (manifest.categories.length > 0) {
+        const firstCat = manifest.categories[0];
+        if (firstCat.subcategories && firstCat.subcategories.length > 0) {
+          navigateToList(firstCat.id, firstCat.subcategories[0].id);
+        } else {
+          navigateToList(firstCat.id, null);
+        }
+      }
+    } catch (err) {
+      console.error('Init failed:', err);
+      document.getElementById('contentWrapper').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h3>加载失败</h3>
+          <p>无法加载内容索引：${err.message}</p>
+        </div>`;
+    }
+  }
+
+  init();
+  </script>
 </body>
 </html>

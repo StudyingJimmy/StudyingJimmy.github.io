@@ -1,0 +1,144 @@
+{
+  "categories": [
+    {
+      "id": "testing",
+      "name": "测试",
+      "icon": "📋",
+      "description": "软件测试领域的工程问题调研，覆盖接口测试、功能测试、性能测试、UI自动化等方向。",
+      "subcategories": [
+        {
+          "id": "api",
+          "name": "接口测试",
+          "description": "关注 API 层面的测试方法、工具链和自动化策略。包括 RESTful/gRPC 接口测试、契约测试、Mock 服务、安全测试等方向。",
+          "sections": ["请求构造", "断言验证", "认证鉴权", "契约测试", "Mock服务", "工具选型", "安全测试"],
+          "articles": [
+            {
+              "id": "api-test-framework",
+              "file": "testing/api/api-test-framework.md",
+              "title": "RESTful API 接口自动化测试框架选型",
+              "section": "工具选型",
+              "tags": ["HTTP", "Pytest", "Postman", "CI/CD"],
+              "status": "done",
+              "date": "2026-05-20"
+            },
+            {
+              "id": "api-security",
+              "file": "testing/api/api-security.md",
+              "title": "常见 API 安全测试漏洞与防护策略",
+              "section": "安全测试",
+              "tags": ["API安全", "OWASP", "认证授权"],
+              "status": "progress",
+              "date": "2026-06-01"
+            }
+          ]
+        },
+        {
+          "id": "function",
+          "name": "功能测试",
+          "description": "聚焦业务逻辑验证，涵盖测试用例设计方法论、黑盒/白盒测试策略、探索性测试、回归测试管理等主题。",
+          "sections": ["测试策略", "用例设计", "探索性测试", "回归测试"],
+          "articles": [
+            {
+              "id": "e2e-strategy",
+              "file": "testing/function/e2e-strategy.md",
+              "title": "微服务架构下的端到端功能测试策略",
+              "section": "测试策略",
+              "tags": ["微服务", "E2E", "测试策略"],
+              "status": "todo",
+              "date": "—"
+            },
+            {
+              "id": "test-design-methods",
+              "file": "testing/function/test-design-methods.md",
+              "title": "测试用例设计方法论：等价类与边界值",
+              "section": "用例设计",
+              "tags": ["黑盒测试", "测试用例", "方法论"],
+              "status": "done",
+              "date": "2026-04-15"
+            }
+          ]
+        },
+        {
+          "id": "performance",
+          "name": "性能测试",
+          "description": "围绕系统性能评估展开，包括压力测试、负载测试、稳定性测试的工具实践和性能瓶颈分析方法。",
+          "sections": ["工具实践", "工具对比", "性能分析", "压测方案"],
+          "articles": [
+            {
+              "id": "locust-practice",
+              "file": "testing/performance/locust-practice.md",
+              "title": "Locust 分布式压测实践与性能瓶颈定位",
+              "section": "工具实践",
+              "tags": ["Locust", "压测", "性能调优", "Python"],
+              "status": "progress",
+              "date": "2026-05-25"
+            },
+            {
+              "id": "load-tool-comparison",
+              "file": "testing/performance/load-tool-comparison.md",
+              "title": "JMeter vs Locust vs K6：压测工具横向对比",
+              "section": "工具对比",
+              "tags": ["JMeter", "Locust", "K6", "工具对比"],
+              "status": "todo",
+              "date": "—"
+            }
+          ]
+        },
+        {
+          "id": "ui-automation",
+          "name": "UI自动化",
+          "description": "浏览器端自动化测试方案，覆盖传统工具（Selenium/Playwright）和 AI 驱动的新一代测试框架。",
+          "sections": ["工具对比", "AI测试", "视觉定位", "框架集成"],
+          "articles": [
+            {
+              "id": "playwright-vs-selenium",
+              "file": "testing/ui-automation/playwright-vs-selenium.md",
+              "title": "Playwright vs Selenium：浏览器自动化方案对比",
+              "section": "工具对比",
+              "tags": ["Playwright", "Selenium", "浏览器自动化"],
+              "status": "done",
+              "date": "2026-05-18"
+            },
+            {
+              "id": "ai-ui-testing",
+              "file": "testing/ui-automation/ai-ui-testing.md",
+              "title": "AI 驱动的 UI 测试工具调研：Midscene 与 Browser-Use",
+              "section": "AI测试",
+              "tags": ["AI测试", "Midscene", "LLM", "视觉定位"],
+              "status": "progress",
+              "date": "2026-06-03"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "devops",
+      "name": "运维",
+      "icon": "🖥",
+      "description": "运维相关的工程问题，涵盖容器化、CI/CD 流水线、监控告警、日志管理、配置管理、云平台操作等方向。",
+      "subcategories": [],
+      "sections": ["容器化", "CI/CD", "监控告警", "日志管理"],
+      "articles": [
+        {
+          "id": "docker-practice",
+          "file": "devops/docker-practice.md",
+          "title": "Docker 容器化部署与多环境管理实践",
+          "section": "容器化",
+          "tags": ["Docker", "容器化", "环境管理"],
+          "status": "todo",
+          "date": "—"
+        },
+        {
+          "id": "cicd-github-actions",
+          "file": "devops/cicd-github-actions.md",
+          "title": "CI/CD 流水线搭建：GitHub Actions 实践",
+          "section": "CI/CD",
+          "tags": ["CI/CD", "GitHub Actions", "自动化"],
+          "status": "progress",
+          "date": "2026-05-28"
+        }
+      ]
+    }
+  ]
+}
