@@ -308,88 +308,123 @@ class Meteor {
   }
 }
 
-// --- Center Explosion (debris + rings + flash) --------------
+// --- Glass Shatter (fragments + crack growth + displacement) -
 class GlassShatter {
   constructor(x, y) {
     this.x = x; this.y = y;
-    // Debris particles flying outward
-    this.debris = [];
     const diag = Math.sqrt(W*W + H*H);
-    for (let i = 0; i < 200; i++) {
-      const a = rand(0, Math.PI * 2);
-      const speed = rand(100, diag * 1.2);
-      this.debris.push({
-        x, y,
-        vx: Math.cos(a) * speed,
-        vy: Math.sin(a) * speed,
-        life: rand(0.3, 0.8),
-        maxLife: rand(0.3, 0.8),
-        size: rand(1, 5),
-        color: ['#ff8844','#ffaa33','#ffcc66','#fff','#ff9944','#ff6600'][randInt(0,5)],
+    // Generate seed points — density falls off from impact
+    const seeds = [{x, y}];
+    const count = 50;
+    for (let i = 0; i < count; i++) {
+      const a = rand(0, Math.PI*2);
+      const d = diag * Math.pow(Math.random(), 1.4) * 0.6;
+      seeds.push({x: x + Math.cos(a)*d, y: y + Math.sin(a)*d});
+    }
+    // Build crack edges (connect each seed to 2-3 nearest neighbors)
+    this.cracks = [];
+    for (let i = 0; i < seeds.length; i++) {
+      const si = seeds[i];
+      const dists = [];
+      for (let j = i+1; j < seeds.length; j++) {
+        const d = Math.sqrt((si.x-seeds[j].x)**2 + (si.y-seeds[j].y)**2);
+        if (d < diag*0.25) dists.push({j, d});
+      }
+      dists.sort((a,b) => a.d-b.d);
+      dists.slice(0, 3).forEach(n => {
+        const sj = seeds[n.j];
+        const isPri = i===0;
+        this.cracks.push({
+          x1: si.x, y1: si.y, x2: sj.x, y2: sj.y,
+          isPrimary: isPri,
+          progress: 0,
+          delay: rand(0, 0.12),
+          life: rand(0.3, 0.8), maxLife: rand(0.3, 0.8),
+          width: isPri ? rand(1.5, 3.5) : rand(0.5, 1.5),
+        });
       });
     }
-    // Expanding rings
-    this.rings = [
-      { r: 0, maxR: diag * 0.7, life: 0.6, maxLife: 0.6, width: 6 },
-      { r: 0, maxR: diag * 0.45, life: 0.4, maxLife: 0.4, width: 3, delay: 0.08 },
-    ];
+    // Fragment displacement: each seed shifts outward from impact
+    this.fragments = seeds.map(s => {
+      const dx = s.x - x, dy = s.y - y;
+      const dist = Math.sqrt(dx*dx+dy*dy) || 1;
+      return {
+        sx: s.x, sy: s.y,
+        ox: (dx/dist) * rand(3, 12),
+        oy: (dy/dist) * rand(3, 12),
+        settled: false,
+      };
+    });
+    // Shockwave ring
+    this.ringR = 0;
+    this.ringMax = diag * 0.6;
     this.flashAlpha = 1.0;
     this.alive = true;
     this.elapsed = 0;
   }
   update(dt) {
     this.elapsed += dt;
-    this.flashAlpha = Math.max(0, 1 - this.elapsed / 0.08);
-    this.rings.forEach(r => {
-      if (r.delay > 0) { r.delay -= dt; return; }
-      r.r += dt * Math.max(W, H) * 1.6;
-      r.life -= dt;
+    this.flashAlpha = Math.max(0, 1 - this.elapsed/0.06);
+    this.ringR += dt * Math.max(W,H) * 2;
+    // Crack growth
+    this.cracks.forEach(c => {
+      c.delay -= dt;
+      if (c.delay <= 0 && c.progress < 1) c.progress = Math.min(1, c.progress + dt*10);
+      if (c.progress >= 1) c.life -= dt;
     });
-    this.debris.forEach(d => {
-      d.x += d.vx * dt;
-      d.y += d.vy * dt;
-      d.vy += 30 * dt; // slight gravity
-      d.life -= dt;
+    // Fragment recovery: settle back after 0.3s
+    this.fragments.forEach(f => {
+      if (this.elapsed > 0.3 && !f.settled) {
+        f.ox *= 0.9; f.oy *= 0.9;
+        if (Math.abs(f.ox) < 0.3 && Math.abs(f.oy) < 0.3) f.settled = true;
+      }
     });
-    if (this.elapsed > 0.8) this.alive = false;
+    if (this.elapsed > 1.5) this.alive = false;
   }
   draw(ctx) {
-    // White flash
+    // Flash
     if (this.flashAlpha > 0) {
-      ctx.globalAlpha = this.flashAlpha * 0.85;
+      ctx.globalAlpha = this.flashAlpha * 0.8;
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, W, H);
     }
+    // Shockwave
+    if (this.ringR < this.ringMax) {
+      ctx.globalAlpha = Math.max(0, 0.5 - this.elapsed/0.5);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 5*(1 - this.elapsed/1.5);
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.ringR, 0, Math.PI*2); ctx.stroke();
+    }
     // Center glow
-    const coreR = 40 + this.elapsed * 200;
-    const coreAlpha = Math.max(0, 0.8 - this.elapsed / 0.5);
-    if (coreAlpha > 0) {
-      const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, coreR);
-      g.addColorStop(0, `rgba(255,255,255,${coreAlpha})`);
-      g.addColorStop(0.3, `rgba(255,200,100,${coreAlpha*0.6})`);
-      g.addColorStop(0.7, `rgba(255,100,30,${coreAlpha*0.2})`);
+    const cr = 30 + this.elapsed*180;
+    const ca = Math.max(0, 0.7-this.elapsed/0.6);
+    if (ca > 0) {
+      const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, cr);
+      g.addColorStop(0, `rgba(255,255,255,${ca})`);
+      g.addColorStop(0.4, `rgba(255,200,100,${ca*0.5})`);
       g.addColorStop(1, 'transparent');
       ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(this.x, this.y, coreR, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(this.x, this.y, cr, 0, Math.PI*2); ctx.fill();
     }
-    // Expanding rings
-    this.rings.forEach(r => {
-      if (r.delay > 0 || r.life <= 0) return;
-      const a = Math.max(0, r.life / r.maxLife);
-      ctx.globalAlpha = a * 0.6;
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = r.width * a;
-      ctx.beginPath(); ctx.arc(this.x, this.y, r.r, 0, Math.PI*2); ctx.stroke();
-    });
-    // Debris
-    this.debris.forEach(d => {
-      if (d.life <= 0) return;
-      const a = Math.max(0, d.life / d.maxLife);
+    // Cracks with glass highlight
+    ctx.lineCap = 'round';
+    this.cracks.forEach(c => {
+      if (c.delay > 0 || c.progress <= 0 || c.life <= 0) return;
+      const p = c.progress;
+      const ep = 1 - Math.pow(1-p, 3);
+      const a = Math.max(0, c.life/c.maxLife);
+      const ex = c.x1 + (c.x2-c.x1)*ep;
+      const ey = c.y1 + (c.y2-c.y1)*ep;
+      ctx.shadowBlur = c.isPrimary ? 8 : 3;
+      ctx.shadowColor = 'rgba(255,255,255,0.7)';
+      ctx.globalAlpha = a*0.5;
+      ctx.strokeStyle = 'rgba(200,220,255,0.9)';
+      ctx.lineWidth = c.width + 2;
+      ctx.beginPath(); ctx.moveTo(c.x1, c.y1); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.shadowBlur = 0;
       ctx.globalAlpha = a;
-      ctx.fillStyle = d.color;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, d.size * a, 0, Math.PI*2);
-      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.lineWidth = c.width;
+      ctx.beginPath(); ctx.moveTo(c.x1, c.y1); ctx.lineTo(ex, ey); ctx.stroke();
     });
   }
 }
