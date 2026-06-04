@@ -475,7 +475,6 @@ class Nebula {
 // --- Global State -------------------------------------------
 let stars = [];
 let meteor = null;
-let glassShatter = null;
 let scatteredParticles = [];
 let nebulae = [];
 let impactPoint = { x: 0, y: 0 };
@@ -830,23 +829,28 @@ function loop(timestamp) {
     meteor.draw(ctx);
     if (r === 'impact') {
       impactPoint = { x: meteor.x, y: meteor.y };
-      glassShatter = new GlassShatter(impactPoint.x, impactPoint.y);
+      // Spawn lightning burst from impact outward
+      for (let i = 0; i < 18; i++) {
+        const b = new Lightning();
+        b.segs = [];
+        b.buildFractal(impactPoint.x, impactPoint.y,
+          impactPoint.x + Math.cos(i/18*Math.PI*2)*rand(W*0.3,W*0.7),
+          impactPoint.y + Math.sin(i/18*Math.PI*2)*rand(H*0.3,H*0.7),
+          Math.max(W,H)*0.18, true);
+        b.life = rand(0.12, 0.35); b.maxLife = b.life;
+        bolts.push(b);
+      }
       createColorfulScatter(impactPoint.x, impactPoint.y);
       triggerShake();
       phase = Phase.GLASS;
     }
   }
 
-  // --- Glass Shatter ---
-  if (glassShatter && glassShatter.alive) {
-    glassShatter.update(dt);
-    glassShatter.draw(ctx);
-    if (!glassShatter.alive) {
-      glassShatter = null;
-      if (!twActive && !twDone) {
-        startTypewriter();
-        phase = Phase.TYPEWRITER;
-      }
+  // --- Post-impact: start typewriter after brief delay ---
+  if (phase === Phase.GLASS && globalTime > phaseStart + 0.4) {
+    if (!twActive && !twDone) {
+      startTypewriter();
+      phase = Phase.TYPEWRITER;
     }
   }
 
@@ -921,9 +925,8 @@ window.addEventListener('touchstart', (e) => { handleMove(e); handleClick(e); },
 if (canvas) canvas.addEventListener('dblclick', () => {
   if (phase >= Phase.IDLE) return;
 
-  // 1. Kill meteor + glass
+  // 1. Kill meteor
   if (meteor) meteor.alive = false;
-  glassShatter = null;
 
   // 2. Show all text immediately, clean up typewriter state
   typeLines.forEach(l => {
