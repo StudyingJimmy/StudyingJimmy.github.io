@@ -185,7 +185,13 @@
       justify-content: center;
     }
     .engineering-sidebar.collapsed ~ .engineering-main {
-      margin-left: 44px;
+      margin-left: 0;
+    }
+
+    /* Collapsed sidebar: overlay on content */
+    .engineering-sidebar.collapsed {
+      box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+      background: var(--bg-elevated);
     }
 
     .content-wrapper {
