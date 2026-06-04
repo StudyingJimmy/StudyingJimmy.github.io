@@ -206,80 +206,114 @@ class Meteor {
   }
 }
 
-// --- Glass Shatter (full-screen crack) ----------------------
+// --- Glass Shatter (Voronoi-like fracture network) ----------
 class GlassShatter {
   constructor(x, y) {
     this.x = x; this.y = y;
-    this.cracks = [];
-    const count = 130;
     const diag = Math.sqrt(W*W + H*H);
-    for (let i = 0; i < count; i++) {
-      const angle = rand(0, Math.PI * 2);
-      // Primary cracks reach across the entire screen
-      const isPrimary = i < 25;
-      this.cracks.push({
-        angle,
-        len: isPrimary ? rand(diag * 0.4, diag * 0.7) : rand(60, diag * 0.45),
-        cx: x + rand(-60, 60),
-        cy: y + rand(-60, 60),
-        life: rand(0.4, 0.9),
-        maxLife: rand(0.4, 0.9),
-        width: isPrimary ? rand(2, 5) : rand(0.8, 2.5),
-        branches: isPrimary ? randInt(1, 3) : randInt(0, 1),
+    // Generate fracture seed points — density falls off from impact
+    this.seeds = [{x, y, isImpact: true}];
+    const seedCount = 55;
+    for (let i = 0; i < seedCount; i++) {
+      const a = rand(0, Math.PI * 2);
+      // Gamma-like distribution: more seeds near impact
+      const d = diag * Math.pow(Math.random(), 1.5) * 0.65;
+      this.seeds.push({x: x + Math.cos(a) * d, y: y + Math.sin(a) * d});
+    }
+    // Build fracture edges — connect each seed to nearest neighbors
+    this.edges = [];
+    const maxEdgeDist = diag * 0.3;
+    for (let i = 0; i < this.seeds.length; i++) {
+      const si = this.seeds[i];
+      const neighbors = [];
+      for (let j = i + 1; j < this.seeds.length; j++) {
+        const sj = this.seeds[j];
+        const d = Math.sqrt((si.x-sj.x)**2 + (si.y-sj.y)**2);
+        if (d < maxEdgeDist && neighbors.length < 4) {
+          neighbors.push({j, d});
+        }
+      }
+      neighbors.sort((a,b) => a.d - b.d);
+      neighbors.slice(0, 3).forEach(n => {
+        const sj = this.seeds[n.j];
+        const isPrimary = si.isImpact || sj.isImpact || n.d > diag * 0.15;
+        this.edges.push({
+          x1: si.x, y1: si.y, x2: sj.x, y2: sj.y,
+          isPrimary,
+          progress: 0, // 0→1 for easing animation
+          delay: rand(0, 0.15),
+          life: rand(0.3, 0.7),
+          maxLife: rand(0.3, 0.7),
+          width: isPrimary ? rand(1.5, 4) : rand(0.5, 1.5),
+        });
       });
     }
     // Shockwave ring
     this.ringRadius = 0;
-    this.ringMax = diag * 0.7;
+    this.ringMax = diag * 0.6;
     this.flashAlpha = 1.0;
     this.alive = true;
     this.elapsed = 0;
   }
   update(dt) {
     this.elapsed += dt;
-    this.flashAlpha = Math.max(0, 1 - this.elapsed / 0.12);
-    this.ringRadius += dt * Math.max(W, H) * 1.6;
-    this.cracks.forEach(c => c.life -= dt);
-    if (this.elapsed > 0.8) this.alive = false;
+    this.flashAlpha = Math.max(0, 1 - this.elapsed / 0.1);
+    this.ringRadius += dt * Math.max(W, H) * 1.8;
+    // Non-linear crack spread: cubic-bezier-like burst
+    this.edges.forEach(e => {
+      e.delay -= dt;
+      if (e.delay <= 0 && e.progress < 1) {
+        e.progress = Math.min(1, e.progress + dt * 8); // rapid spread
+      }
+      if (e.progress >= 1) e.life -= dt;
+    });
+    if (this.elapsed > 0.9) this.alive = false;
   }
   draw(ctx) {
     // White flash
     if (this.flashAlpha > 0) {
-      ctx.globalAlpha = this.flashAlpha * 0.75;
+      ctx.globalAlpha = this.flashAlpha * 0.7;
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, W, H);
     }
-    // Shockwave ring
+    // Shockwave
     if (this.ringRadius < this.ringMax) {
-      ctx.globalAlpha = Math.max(0, 0.5 - this.elapsed / 0.6);
+      ctx.globalAlpha = Math.max(0, 0.5 - this.elapsed / 0.5);
       ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 4 * (1 - this.elapsed / 0.8);
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.ringRadius, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.lineWidth = 5 * (1 - this.elapsed / 0.9);
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.ringRadius, 0, Math.PI*2); ctx.stroke();
     }
-    // Cracks
-    this.cracks.forEach(c => {
-      if (c.life <= 0) return;
-      const a = Math.max(0, c.life / c.maxLife);
+    // Draw cracks with easing + bezier curves
+    ctx.lineCap = 'round';
+    this.edges.forEach(e => {
+      if (e.delay > 0 || e.life <= 0 || e.progress <= 0) return;
+      const p = Math.min(1, e.progress);
+      // Easing: cubic-bezier — fast burst then decelerate
+      const ep = 1 - Math.pow(1 - p, 3);
+      const a = Math.max(0, e.life / e.maxLife);
+      // Bezier control point for curved cracks
+      const mx = (e.x1 + e.x2) / 2 + (Math.random() - 0.5) * 80;
+      const my = (e.y1 + e.y2) / 2 + (Math.random() - 0.5) * 80;
+      const ex = e.x1 + (e.x2 - e.x1) * ep;
+      const ey = e.y1 + (e.y2 - e.y1) * ep;
+      const cpx = e.x1 + (mx - e.x1) * ep;
+      const cpy = e.y1 + (my - e.y1) * ep;
+      // Glass depth highlight
+      ctx.shadowBlur = e.isPrimary ? 6 : 3;
+      ctx.shadowColor = 'rgba(255,255,255,0.6)';
+      ctx.globalAlpha = a * 0.5;
+      ctx.strokeStyle = 'rgba(200,220,255,0.8)';
+      ctx.lineWidth = e.width + 2;
+      ctx.beginPath(); ctx.moveTo(e.x1, e.y1);
+      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+      ctx.stroke();
+      // White core
+      ctx.shadowBlur = 0;
       ctx.globalAlpha = a;
-      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-      ctx.lineWidth = c.width * a;
-      ctx.beginPath();
-      ctx.moveTo(c.cx, c.cy);
-      const ex = c.cx + Math.cos(c.angle) * c.len;
-      const ey = c.cy + Math.sin(c.angle) * c.len;
-      ctx.lineTo(ex, ey);
-      // Branch cracks
-      for (let b = 0; b < c.branches; b++) {
-        const t = 0.3 + rand(0, 0.5);
-        const mx = c.cx + Math.cos(c.angle) * c.len * t;
-        const my = c.cy + Math.sin(c.angle) * c.len * t;
-        const ba = c.angle + rand(-0.9, 0.9);
-        const bl = c.len * rand(0.15, 0.35);
-        ctx.moveTo(mx, my);
-        ctx.lineTo(mx + Math.cos(ba) * bl, my + Math.sin(ba) * bl);
-      }
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.lineWidth = e.width;
+      ctx.beginPath(); ctx.moveTo(e.x1, e.y1);
+      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
       ctx.stroke();
     });
   }
