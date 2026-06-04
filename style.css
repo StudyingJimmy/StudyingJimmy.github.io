@@ -740,6 +740,69 @@ body.cosmic .global-footer {
   box-shadow: 0 0 8px var(--accent-glow);
 }
 
+/* --- Research badge tooltip --------------------------------- */
+.research-badge {
+  position: relative;
+  cursor: pointer;
+  border-bottom: 1px dashed var(--accent);
+  color: var(--text-primary);
+  transition: color 0.2s;
+}
+.research-badge:hover { color: var(--accent); }
+
+.research-popover {
+  position: absolute;
+  left: calc(100% + 1rem);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 320px;
+  padding: 1rem 1.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s, visibility 0.25s;
+  z-index: 200;
+  pointer-events: none;
+}
+.research-popover::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-right-color: var(--border-strong);
+}
+.research-badge:hover .research-popover,
+.research-badge.pinned .research-popover {
+  opacity: 1;
+  visibility: visible;
+}
+.research-badge.pinned .research-popover {
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .research-popover {
+    left: auto; right: auto;
+    top: calc(100% + 0.5rem);
+    transform: none;
+    width: 260px;
+  }
+  .research-popover::before {
+    right: auto; left: 1rem; top: auto;
+    bottom: 100%;
+    border-right-color: transparent;
+    border-bottom-color: var(--border-strong);
+  }
+}
+
 /* --- Animations -------------------------------------------- */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
