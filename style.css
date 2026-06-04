@@ -678,7 +678,7 @@ body.cosmic .global-footer {
 /* Theme toggle inside nav — overrides fixed positioning */
 .global-nav .theme-toggle {
   position: relative;
-  margin-left: 1.5rem;
+  margin-left: auto;
   flex-shrink: 0;
   z-index: auto;
   top: auto; right: auto;
