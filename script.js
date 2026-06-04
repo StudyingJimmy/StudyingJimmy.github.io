@@ -531,7 +531,7 @@ class Lightning {
     this.paths = [];
     this.buildFractal(sx, sy, ex, ey, Math.max(W, H) * 0.25, true);
     // Short life with flicker
-    this.life = rand(0.05, 0.15);
+    this.life = rand(0.04, 0.45); // wide range: quick flash or slow sweep
     this.maxLife = this.life;
     this.alive = true;
     this.flicker = rand(0.4, 1.0); // changes each frame
@@ -797,17 +797,12 @@ function loop(timestamp) {
     bolts = bolts.filter(b => b.alive);
     if (!hoveredNebula && Math.random() < 0.001) boltBurst = randInt(2, 3);
 
-    // --- Energy Burst (center → outward) ---
+    // --- Energy Burst (center glow only, no outward bolts) ---
     burstTimer -= dt;
     if (burstTimer <= 0 && !hoveredNebula) {
       burstActive = 1.0;
       colorTemp = 1.0;
-      const burstCount = randInt(8, 16);
-      for (let i = 0; i < burstCount; i++) {
-        bolts.push(new Lightning(true)); // fromCenter
-      }
-      burstTimer = rand(8, 15);
-      if (bolts.length > 5) bolts.splice(0, bolts.length - 5);
+      burstTimer = rand(10, 18);
     }
   } else {
     const sparkle = hoveredNebula ? 1 : 0;
