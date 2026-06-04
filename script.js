@@ -187,21 +187,43 @@ class Meteor {
     const progress = Math.min(1, this.elapsed / this.duration);
     const scale = 0.3 + progress * progress * 8;
     const glowR = 50 * scale;
-    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowR);
-    grad.addColorStop(0, '#fff');
-    grad.addColorStop(0.15, '#ffeebb');
-    grad.addColorStop(0.4, '#ff8833');
-    grad.addColorStop(0.7, '#ff3300');
-    grad.addColorStop(1, 'transparent');
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, glowR, 0, Math.PI * 2);
-    ctx.fill();
+    // --- Irregular flame using multiple offset blobs ---
+    const flameBlobs = 8;
+    for (let i = 0; i < flameBlobs; i++) {
+      const ba = (i / flameBlobs) * Math.PI * 2 + this.elapsed * 3 + i;
+      const bx = this.x + Math.cos(ba) * glowR * rand(0.2, 0.55);
+      const by = this.y + Math.sin(ba) * glowR * rand(0.2, 0.55);
+      const br = glowR * rand(0.3, 0.7);
+      const g = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+      g.addColorStop(0, `rgba(255,${randInt(150,220)},${randInt(40,120)},0.7)`);
+      g.addColorStop(0.5, `rgba(255,${randInt(80,150)},0,0.35)`);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI*2); ctx.fill();
+    }
+    // Main glow (overlay)
+    const mainG = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowR * 0.6);
+    mainG.addColorStop(0, '#fff');
+    mainG.addColorStop(0.2, '#ffeebb');
+    mainG.addColorStop(0.5, 'rgba(255,150,50,0.4)');
+    mainG.addColorStop(1, 'transparent');
+    ctx.fillStyle = mainG;
+    ctx.beginPath(); ctx.arc(this.x, this.y, glowR * 0.6, 0, Math.PI*2); ctx.fill();
+    // Hot core
     ctx.fillStyle = '#fff';
     ctx.beginPath();
     ctx.arc(this.x, this.y, 6 * scale, 0, Math.PI * 2);
     ctx.fill();
+    // Spark embers at flame edge
+    for (let i = 0; i < 5; i++) {
+      const sa = rand(0, Math.PI*2);
+      const sr = glowR * rand(0.5, 0.9);
+      ctx.globalAlpha = rand(0.4, 0.9);
+      ctx.fillStyle = '#ffcc44';
+      ctx.beginPath();
+      ctx.arc(this.x + Math.cos(sa)*sr, this.y + Math.sin(sa)*sr, rand(1,3), 0, Math.PI*2);
+      ctx.fill();
+    }
     this.trail.forEach(p => { p.life -= 0.02; p.draw(ctx); });
   }
 }
