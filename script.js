@@ -528,13 +528,14 @@ class Lightning {
     this.life = rand(0.04, 0.45);
     this.maxLife = this.life;
     this.alive = true;
-    this.flicker = rand(0.4, 1.0);
+    this.flicker = rand(0.3, 1.0);
+    this.flickerTimer = rand(0.015, 0.06); // random flicker interval
     this.triggeredPulse = !fromCenter;
     this.accentHue = rand(0,1) < 0.5 ? 195 : 275;
   }
   buildFractal(x1, y1, x2, y2, displace, isTrunk) {
     if (displace < 4) {
-      this.segs.push({x1, y1, x2, y2}); // flat for batch draw
+      this.segs.push({x1, y1, x2, y2});
       return;
     }
     let mx = (x1+x2)/2, my = (y1+y2)/2;
@@ -550,7 +551,11 @@ class Lightning {
   }
   update(dt) {
     this.life -= dt;
-    this.flicker = rand(0.3, 1.0);
+    this.flickerTimer -= dt;
+    if (this.flickerTimer <= 0) {
+      this.flicker = rand(0.2, 1.0);
+      this.flickerTimer = rand(0.01, 0.07);
+    }
     if (this.life <= 0) { this.alive = false; if (this.triggeredPulse) { centerPulse = 1.0; this.triggeredPulse = false; } }
   }
   draw(ctx, temp) {
@@ -723,7 +728,7 @@ function loop(timestamp) {
 
     // --- Center Energy Core ---
     const coreBase = 22;
-    const coreR = coreBase + Math.sin(globalTime * 2) * 4 + centerPulse * 35 + burstActive * 60;
+    const coreR = coreBase + Math.sin(globalTime * 2) * 4 + centerPulse * 50 + burstActive * 120;
     const coreAlpha = 0.15 + centerPulse * 0.7 + burstActive * 1.0;
     const coreCol = colorTemp > 0.5
       ? `rgba(255,255,255,` : `rgba(180,220,255,`;
@@ -774,7 +779,7 @@ function loop(timestamp) {
     if (burstTimer <= 0 && !hoveredNebula) {
       burstActive = 1.0;
       colorTemp = 1.0;
-      burstTimer = rand(10, 18);
+      burstTimer = rand(7, 22);
     }
   } else {
     const sparkle = hoveredNebula ? 1 : 0;
