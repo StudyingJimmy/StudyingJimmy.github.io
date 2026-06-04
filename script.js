@@ -466,24 +466,39 @@ const MAX_ARCS = 20;
 let arcs = [];
 class ArcFlash {
   constructor(x1, y1, x2, y2) {
-    this.x1 = x1; this.y1 = y1;
-    this.x2 = x2; this.y2 = y2;
+    this.segs = [];
+    this.buildFractal(x1, y1, x2, y2, 40);
     this.life = rand(0.04, 0.12);
     this.maxLife = this.life;
+    this.flicker = rand(0.4, 1.0);
     this.alive = true;
+    this.accentHue = rand(0,1) < 0.5 ? 195 : 275;
   }
-  update(dt) { this.life -= dt; if (this.life <= 0) this.alive = false; }
+  buildFractal(x1, y1, x2, y2, displace) {
+    if (displace < 2) {
+      this.segs.push([{x:x1,y:y1},{x:x2,y:y2}]);
+      return;
+    }
+    let mx = (x1+x2)/2, my = (y1+y2)/2;
+    mx += (Math.random()-0.5) * displace;
+    my += (Math.random()-0.5) * displace;
+    this.buildFractal(x1, y1, mx, my, displace*0.5);
+    this.buildFractal(mx, my, x2, y2, displace*0.5);
+  }
+  update(dt) { this.life -= dt; this.flicker = rand(0.3,1.0); if (this.life <= 0) this.alive = false; }
   draw(ctx, temp) {
-    const a = Math.max(0, this.life / this.maxLife);
-    const col = temp > 0.5 ? '#fff' : '#66ccff';
-    ctx.globalAlpha = a * 0.25;
-    ctx.strokeStyle = col;
-    ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.moveTo(this.x1, this.y1); ctx.lineTo(this.x2, this.y2); ctx.stroke();
-    ctx.globalAlpha = a;
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 0.8;
-    ctx.beginPath(); ctx.moveTo(this.x1, this.y1); ctx.lineTo(this.x2, this.y2); ctx.stroke();
+    const a = Math.max(0, this.life / this.maxLife) * this.flicker;
+    if (a < 0.02) return;
+    const glowCol = temp > 0.5 ? '#fff' : `hsla(${this.accentHue},80%,70%,1)`;
+    ctx.lineCap = 'round';
+    this.segs.forEach(seg => {
+      ctx.shadowBlur = 10; ctx.shadowColor = glowCol;
+      ctx.globalAlpha = a * 0.3; ctx.strokeStyle = glowCol; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(seg[0].x, seg[0].y); ctx.lineTo(seg[1].x, seg[1].y); ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = a; ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.moveTo(seg[0].x, seg[0].y); ctx.lineTo(seg[1].x, seg[1].y); ctx.stroke();
+    });
   }
 }
 
@@ -736,8 +751,8 @@ function loop(timestamp) {
 
     // --- Center Energy Core ---
     const coreBase = 22;
-    const coreR = coreBase + Math.sin(globalTime * 2) * 4 + centerPulse * 20 + burstActive * 35;
-    const coreAlpha = 0.15 + centerPulse * 0.5 + burstActive * 0.7;
+    const coreR = coreBase + Math.sin(globalTime * 2) * 4 + centerPulse * 35 + burstActive * 60;
+    const coreAlpha = 0.15 + centerPulse * 0.7 + burstActive * 1.0;
     const coreCol = colorTemp > 0.5
       ? `rgba(255,255,255,` : `rgba(180,220,255,`;
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 2.5);
@@ -775,7 +790,7 @@ function loop(timestamp) {
       }
       boltTimer = rand(1.5, 6);
       boltBurst = 0;
-      if (bolts.length > 8) bolts.splice(0, bolts.length - 8);
+      if (bolts.length > 3) bolts.splice(0, bolts.length - 3);
     }
     const boltDt = hoveredNebula ? dt * 0.15 : dt;
     bolts.forEach(b => { b.update(boltDt); b.draw(ctx, colorTemp); });
@@ -792,7 +807,7 @@ function loop(timestamp) {
         bolts.push(new Lightning(true)); // fromCenter
       }
       burstTimer = rand(8, 15);
-      if (bolts.length > 14) bolts.splice(0, bolts.length - 14);
+      if (bolts.length > 5) bolts.splice(0, bolts.length - 5);
     }
   } else {
     const sparkle = hoveredNebula ? 1 : 0;
