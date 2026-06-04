@@ -206,115 +206,88 @@ class Meteor {
   }
 }
 
-// --- Glass Shatter (Voronoi-like fracture network) ----------
+// --- Center Explosion (debris + rings + flash) --------------
 class GlassShatter {
   constructor(x, y) {
     this.x = x; this.y = y;
+    // Debris particles flying outward
+    this.debris = [];
     const diag = Math.sqrt(W*W + H*H);
-    // Generate fracture seed points — density falls off from impact
-    this.seeds = [{x, y, isImpact: true}];
-    const seedCount = 55;
-    for (let i = 0; i < seedCount; i++) {
+    for (let i = 0; i < 200; i++) {
       const a = rand(0, Math.PI * 2);
-      // Gamma-like distribution: more seeds near impact
-      const d = diag * Math.pow(Math.random(), 1.5) * 0.65;
-      this.seeds.push({x: x + Math.cos(a) * d, y: y + Math.sin(a) * d});
-    }
-    // Build fracture edges — connect each seed to nearest neighbors
-    this.edges = [];
-    const maxEdgeDist = diag * 0.3;
-    for (let i = 0; i < this.seeds.length; i++) {
-      const si = this.seeds[i];
-      const neighbors = [];
-      for (let j = i + 1; j < this.seeds.length; j++) {
-        const sj = this.seeds[j];
-        const d = Math.sqrt((si.x-sj.x)**2 + (si.y-sj.y)**2);
-        if (d < maxEdgeDist && neighbors.length < 4) {
-          neighbors.push({j, d});
-        }
-      }
-      neighbors.sort((a,b) => a.d - b.d);
-      neighbors.slice(0, 3).forEach(n => {
-        const sj = this.seeds[n.j];
-        const isPrimary = si.isImpact || sj.isImpact || n.d > diag * 0.15;
-        this.edges.push({
-          x1: si.x, y1: si.y, x2: sj.x, y2: sj.y,
-          isPrimary,
-          progress: 0, // 0→1 for easing animation
-          delay: rand(0, 0.15),
-          life: rand(0.3, 0.7),
-          maxLife: rand(0.3, 0.7),
-          width: isPrimary ? rand(1.5, 4) : rand(0.5, 1.5),
-        });
+      const speed = rand(100, diag * 1.2);
+      this.debris.push({
+        x, y,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed,
+        life: rand(0.3, 0.8),
+        maxLife: rand(0.3, 0.8),
+        size: rand(1, 5),
+        color: ['#ff8844','#ffaa33','#ffcc66','#fff','#ff9944','#ff6600'][randInt(0,5)],
       });
     }
-    // Shockwave ring
-    this.ringRadius = 0;
-    this.ringMax = diag * 0.6;
+    // Expanding rings
+    this.rings = [
+      { r: 0, maxR: diag * 0.7, life: 0.6, maxLife: 0.6, width: 6 },
+      { r: 0, maxR: diag * 0.45, life: 0.4, maxLife: 0.4, width: 3, delay: 0.08 },
+    ];
     this.flashAlpha = 1.0;
     this.alive = true;
     this.elapsed = 0;
   }
   update(dt) {
     this.elapsed += dt;
-    this.flashAlpha = Math.max(0, 1 - this.elapsed / 0.1);
-    this.ringRadius += dt * Math.max(W, H) * 1.8;
-    // Non-linear crack spread: cubic-bezier-like burst
-    this.edges.forEach(e => {
-      e.delay -= dt;
-      if (e.delay <= 0 && e.progress < 1) {
-        e.progress = Math.min(1, e.progress + dt * 8); // rapid spread
-      }
-      if (e.progress >= 1) e.life -= dt;
+    this.flashAlpha = Math.max(0, 1 - this.elapsed / 0.08);
+    this.rings.forEach(r => {
+      if (r.delay > 0) { r.delay -= dt; return; }
+      r.r += dt * Math.max(W, H) * 1.6;
+      r.life -= dt;
     });
-    if (this.elapsed > 0.9) this.alive = false;
+    this.debris.forEach(d => {
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      d.vy += 30 * dt; // slight gravity
+      d.life -= dt;
+    });
+    if (this.elapsed > 0.8) this.alive = false;
   }
   draw(ctx) {
     // White flash
     if (this.flashAlpha > 0) {
-      ctx.globalAlpha = this.flashAlpha * 0.7;
+      ctx.globalAlpha = this.flashAlpha * 0.85;
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, W, H);
     }
-    // Shockwave
-    if (this.ringRadius < this.ringMax) {
-      ctx.globalAlpha = Math.max(0, 0.5 - this.elapsed / 0.5);
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 5 * (1 - this.elapsed / 0.9);
-      ctx.beginPath(); ctx.arc(this.x, this.y, this.ringRadius, 0, Math.PI*2); ctx.stroke();
+    // Center glow
+    const coreR = 40 + this.elapsed * 200;
+    const coreAlpha = Math.max(0, 0.8 - this.elapsed / 0.5);
+    if (coreAlpha > 0) {
+      const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, coreR);
+      g.addColorStop(0, `rgba(255,255,255,${coreAlpha})`);
+      g.addColorStop(0.3, `rgba(255,200,100,${coreAlpha*0.6})`);
+      g.addColorStop(0.7, `rgba(255,100,30,${coreAlpha*0.2})`);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(this.x, this.y, coreR, 0, Math.PI*2); ctx.fill();
     }
-    // Draw cracks with easing + bezier curves
-    ctx.lineCap = 'round';
-    this.edges.forEach(e => {
-      if (e.delay > 0 || e.life <= 0 || e.progress <= 0) return;
-      const p = Math.min(1, e.progress);
-      // Easing: cubic-bezier — fast burst then decelerate
-      const ep = 1 - Math.pow(1 - p, 3);
-      const a = Math.max(0, e.life / e.maxLife);
-      // Bezier control point for curved cracks
-      const mx = (e.x1 + e.x2) / 2 + (Math.random() - 0.5) * 80;
-      const my = (e.y1 + e.y2) / 2 + (Math.random() - 0.5) * 80;
-      const ex = e.x1 + (e.x2 - e.x1) * ep;
-      const ey = e.y1 + (e.y2 - e.y1) * ep;
-      const cpx = e.x1 + (mx - e.x1) * ep;
-      const cpy = e.y1 + (my - e.y1) * ep;
-      // Glass depth highlight
-      ctx.shadowBlur = e.isPrimary ? 6 : 3;
-      ctx.shadowColor = 'rgba(255,255,255,0.6)';
-      ctx.globalAlpha = a * 0.5;
-      ctx.strokeStyle = 'rgba(200,220,255,0.8)';
-      ctx.lineWidth = e.width + 2;
-      ctx.beginPath(); ctx.moveTo(e.x1, e.y1);
-      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
-      ctx.stroke();
-      // White core
-      ctx.shadowBlur = 0;
+    // Expanding rings
+    this.rings.forEach(r => {
+      if (r.delay > 0 || r.life <= 0) return;
+      const a = Math.max(0, r.life / r.maxLife);
+      ctx.globalAlpha = a * 0.6;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = r.width * a;
+      ctx.beginPath(); ctx.arc(this.x, this.y, r.r, 0, Math.PI*2); ctx.stroke();
+    });
+    // Debris
+    this.debris.forEach(d => {
+      if (d.life <= 0) return;
+      const a = Math.max(0, d.life / d.maxLife);
       ctx.globalAlpha = a;
-      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-      ctx.lineWidth = e.width;
-      ctx.beginPath(); ctx.moveTo(e.x1, e.y1);
-      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
-      ctx.stroke();
+      ctx.fillStyle = d.color;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.size * a, 0, Math.PI*2);
+      ctx.fill();
     });
   }
 }
@@ -475,6 +448,7 @@ class Nebula {
 // --- Global State -------------------------------------------
 let stars = [];
 let meteor = null;
+let glassShatter = null;
 let scatteredParticles = [];
 let nebulae = [];
 let impactPoint = { x: 0, y: 0 };
@@ -802,6 +776,9 @@ function loop(timestamp) {
       boltBurst = 0;
       if (bolts.length > 3) bolts.splice(0, bolts.length - 3);
     }
+    const boltDt = hoveredNebula ? dt * 0.15 : dt;
+    bolts.forEach(b => { b.update(boltDt); b.draw(ctx, colorTemp); });
+    bolts = bolts.filter(b => b.alive);
     if (!hoveredNebula && Math.random() < 0.001) boltBurst = randInt(2, 3);
 
     // --- Energy Burst (center glow only, no outward bolts) ---
@@ -816,13 +793,6 @@ function loop(timestamp) {
     stars.forEach(s => s.draw(ctx, globalTime, sparkle));
   }
 
-  // --- Lightning draw (all post-impact phases) ---
-  if (phase >= Phase.GLASS) {
-    const boltDt = (hoveredNebula && phase === Phase.IDLE) ? dt * 0.15 : dt;
-    bolts.forEach(b => { b.update(boltDt); b.draw(ctx, colorTemp); });
-    bolts = bolts.filter(b => b.alive);
-  }
-
   // --- Meteor ---
   if (!meteor && globalTime > METEOR_START) {
     meteor = new Meteor();
@@ -833,28 +803,23 @@ function loop(timestamp) {
     meteor.draw(ctx);
     if (r === 'impact') {
       impactPoint = { x: meteor.x, y: meteor.y };
-      // Spawn lightning burst from impact outward
-      for (let i = 0; i < 18; i++) {
-        const b = new Lightning();
-        b.segs = [];
-        b.buildFractal(impactPoint.x, impactPoint.y,
-          impactPoint.x + Math.cos(i/18*Math.PI*2)*rand(W*0.3,W*0.7),
-          impactPoint.y + Math.sin(i/18*Math.PI*2)*rand(H*0.3,H*0.7),
-          Math.max(W,H)*0.18, true);
-        b.life = rand(0.12, 0.35); b.maxLife = b.life;
-        bolts.push(b);
-      }
+      glassShatter = new GlassShatter(impactPoint.x, impactPoint.y);
       createColorfulScatter(impactPoint.x, impactPoint.y);
       triggerShake();
       phase = Phase.GLASS;
     }
   }
 
-  // --- Post-impact: start typewriter after brief delay ---
-  if (phase === Phase.GLASS && globalTime > phaseStart + 0.4) {
-    if (!twActive && !twDone) {
-      startTypewriter();
-      phase = Phase.TYPEWRITER;
+  // --- Glass Shatter ---
+  if (glassShatter && glassShatter.alive) {
+    glassShatter.update(dt);
+    glassShatter.draw(ctx);
+    if (!glassShatter.alive) {
+      glassShatter = null;
+      if (!twActive && !twDone) {
+        startTypewriter();
+        phase = Phase.TYPEWRITER;
+      }
     }
   }
 
@@ -929,8 +894,9 @@ window.addEventListener('touchstart', (e) => { handleMove(e); handleClick(e); },
 if (canvas) canvas.addEventListener('dblclick', () => {
   if (phase >= Phase.IDLE) return;
 
-  // 1. Kill meteor
+  // 1. Kill meteor + glass
   if (meteor) meteor.alive = false;
+  glassShatter = null;
 
   // 2. Show all text immediately, clean up typewriter state
   typeLines.forEach(l => {
