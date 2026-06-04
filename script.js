@@ -493,104 +493,104 @@ let burstTimer = rand(8, 15);
 let burstActive = 0;      // 0..1, burst intensity
 let colorTemp = 0;        // 0=cold blue, 1=white hot
 
-// Lightning → center: dense continuous path, no sharp angles
+// Lightning v4 — midpoint displacement fractal + flicker + color edge
 class Lightning {
   constructor(fromCenter = false) {
-    const diag = Math.sqrt(W*W + H*H);
-    let sx, sy, targetAngle, totalLen;
+    let sx, sy, ex, ey;
     if (fromCenter) {
       sx = cx; sy = cy;
-      targetAngle = rand(0, Math.PI * 2);
-      totalLen = rand(80, 280);
+      const a = rand(0, Math.PI * 2);
+      const len = rand(80, 280);
+      ex = sx + Math.cos(a) * len;
+      ey = sy + Math.sin(a) * len;
     } else {
       const edge = randInt(0, 3);
       if (edge === 0)      { sx = rand(0, W); sy = -10; }
       else if (edge === 1) { sx = W + 10; sy = rand(0, H); }
       else if (edge === 2) { sx = rand(0, W); sy = H + 10; }
       else                 { sx = -10; sy = rand(0, H); }
-      const tx = cx + rand(-200, 200);
-      const ty = cy + rand(-150, 150);
-      targetAngle = Math.atan2(ty - sy, tx - sx);
-      totalLen = Math.sqrt((tx-sx)**2 + (ty-sy)**2);
+      ex = cx + rand(-200, 200);
+      ey = cy + rand(-150, 150);
     }
-    this.trunk = this.buildPath(sx, sy, targetAngle, totalLen, 180);
-    // Branches from trunk
-    this.branches = [];
-    const bCount = randInt(2, 5);
-    for (let b = 0; b < bCount; b++) {
-      const idx = randInt(15, this.trunk.length - 15);
-      const bp = this.trunk[idx];
-      const ba = targetAngle + (rand(0,1)<0.5?-1:1) * rand(0.6, 1.2);
-      this.branches.push(this.buildPath(bp.x, bp.y, ba, totalLen * rand(0.15, 0.35), 50));
-    }
-    this.life = fromCenter ? rand(0.08, 0.5) : rand(0.06, 0.55);
+    // Store all paths (trunk + branches) as arrays of {x,y}
+    this.paths = [];
+    this.buildFractal(sx, sy, ex, ey, Math.max(W, H) * 0.25, true);
+    // Short life with flicker
+    this.life = rand(0.05, 0.15);
     this.maxLife = this.life;
     this.alive = true;
+    this.flicker = rand(0.4, 1.0); // changes each frame
     this.triggeredPulse = !fromCenter;
+    // Random accent hue for this bolt
+    this.accentHue = rand(0,1) < 0.5 ? 195 : 275; // cyan or purple
   }
-  // Build dense continuous path: ~200 points, max 3-5° turn per step
-  buildPath(x, y, targetAngle, totalLen, steps) {
-    const pts = [{x, y}];
-    const perpX = Math.cos(targetAngle + Math.PI/2);
-    const perpY = Math.sin(targetAngle + Math.PI/2);
-    const fwdX = Math.cos(targetAngle);
-    const fwdY = Math.sin(targetAngle);
-    let cx = x, cy = y;
-    let offset = 0; // current lateral offset
-    let offsetV = 0; // lateral velocity
-    for (let i = 0; i < steps; i++) {
-      const t = i / steps;
-      // Forward progress (mostly uniform with slight jitter)
-      cx += fwdX * (totalLen / steps) * rand(0.8, 1.2);
-      cy += fwdY * (totalLen / steps) * rand(0.8, 1.2);
-      // Lateral: spring-damped random walk — creates jagged zigzag
-      offsetV += rand(-8, 8);
-      offsetV *= 0.7; // damping prevents runaway
-      offset += offsetV;
-      // Spring pulls offset back toward center line
-      offset *= 0.92;
-      // Apply lateral offset
-      cx += perpX * offset;
-      cy += perpY * offset;
-      pts.push({x: cx, y: cy});
+  // Recursive midpoint displacement
+  buildFractal(x1, y1, x2, y2, displace, isTrunk) {
+    if (displace < 1.5) {
+      const seg = [{x: x1, y: y1}, {x: x2, y: y2}];
+      this.paths.push(seg);
+      return seg;
     }
-    return pts;
+    let mx = (x1 + x2) / 2;
+    let my = (y1 + y2) / 2;
+    mx += (Math.random() - 0.5) * displace;
+    my += (Math.random() - 0.5) * displace;
+    const left = this.buildFractal(x1, y1, mx, my, displace * 0.55, isTrunk);
+    const right = this.buildFractal(mx, my, x2, y2, displace * 0.55, isTrunk);
+    // Branch: 12-18% chance at each midpoint on trunk
+    if (isTrunk && Math.random() < 0.15 && displace > 8) {
+      const ba = Math.atan2(y2 - y1, x2 - x1) + (rand(0,1)<0.5?-1:1) * rand(0.8, 1.4);
+      const bl = displace * rand(1.5, 3);
+      const bx = mx + Math.cos(ba) * bl;
+      const by = my + Math.sin(ba) * bl;
+      this.buildFractal(mx, my, bx, by, displace * 0.35, false);
+    }
+    return left;
   }
   update(dt) {
     this.life -= dt;
+    this.flicker = rand(0.3, 1.0);
     if (this.life <= 0) {
       this.alive = false;
       if (this.triggeredPulse) { centerPulse = 1.0; this.triggeredPulse = false; }
     }
   }
   draw(ctx, temp) {
-    const a = Math.max(0, this.life / this.maxLife);
-    const glowCol = temp > 0.5 ? '#ffffff' : '#6699dd';
-    const midCol = temp > 0.5 ? '#ffffff' : '#aaddff';
-    const drawPath = (pts, lw, col, alpha) => {
-      if (pts.length < 2) return;
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = col;
-      ctx.lineWidth = lw;
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    const a = Math.max(0, this.life / this.maxLife) * this.flicker;
+    if (a < 0.02) return;
+    const isHot = temp > 0.5;
+    const glowCol = isHot ? '#ffffff' : `hsla(${this.accentHue},80%,70%,1)`;
+    const midCol = isHot ? '#ffffff' : '#aaddff';
+    ctx.lineCap = 'round';
+    this.paths.forEach(seg => {
+      if (seg.length < 2) return;
+      // Outer color edge (cyan/purple)
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = glowCol;
+      ctx.globalAlpha = a * 0.3;
+      ctx.strokeStyle = glowCol;
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(seg[0].x, seg[0].y);
+      for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i].x, seg[i].y);
       ctx.stroke();
-    };
-    // Wide glow
-    ctx.shadowBlur = 14;
-    ctx.shadowColor = glowCol;
-    drawPath(this.trunk, 5, glowCol, a * 0.25);
-    this.branches.forEach(b => drawPath(b, 3, glowCol, a * 0.18));
-    // Medium
-    ctx.shadowBlur = 6;
-    ctx.shadowColor = midCol;
-    drawPath(this.trunk, 2.5, midCol, a * 0.5);
-    this.branches.forEach(b => drawPath(b, 1.5, midCol, a * 0.35));
-    // White core
-    ctx.shadowBlur = 0;
-    drawPath(this.trunk, 1, '#fff', a);
-    this.branches.forEach(b => drawPath(b, 0.6, '#fff', a * 0.7));
+      // Mid glow
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = midCol;
+      ctx.globalAlpha = a * 0.55;
+      ctx.strokeStyle = midCol;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(seg[0].x, seg[0].y);
+      for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i].x, seg[i].y);
+      ctx.stroke();
+      // White core
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(seg[0].x, seg[0].y);
+      for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i].x, seg[i].y);
+      ctx.stroke();
+    });
   }
 }
 
