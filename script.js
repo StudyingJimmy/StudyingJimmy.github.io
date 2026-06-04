@@ -150,41 +150,67 @@ class Star {
   }
 }
 
-// --- Meteor (grows as it approaches) ------------------------
+// --- Meteor (thermal trail + lag + wobble + dust) -----------
 class Meteor {
   constructor() {
     this.startX = W + 150;
     this.startY = -150;
-    this.x = this.startX;
-    this.y = this.startY;
-    this.targetX = cx;
-    this.targetY = H * 0.58;
+    this.x = this.startX; this.y = this.startY;
+    this.targetX = cx; this.targetY = H * 0.58;
     const totalDist = Math.sqrt((this.startX-this.targetX)**2 + (this.startY-this.targetY)**2);
     this.duration = 0.8;
     this.speed = totalDist / this.duration;
     const angle = Math.atan2(this.targetY - this.startY, this.targetX - this.startX);
     this.vx = Math.cos(angle) * this.speed;
     this.vy = Math.sin(angle) * this.speed;
-    this.trail = [];
+    this.headAngle = angle; // direction of motion
+    this.trail = [];    // {x, y, age} time-series accumulation
+    this.dust = [];     // emitted particles with physics
     this.alive = true;
     this.elapsed = 0;
   }
   update(dt) {
     this.elapsed += dt;
-    this.x += this.vx * dt;
-    this.y += this.vy * dt;
+    // Wobble: sinusoidal offset perpendicular to motion
+    const perpX = -Math.sin(this.headAngle);
+    const perpY = Math.cos(this.headAngle);
+    const wobble = Math.sin(this.elapsed * 18) * 12 + Math.sin(this.elapsed * 37) * 5;
+    this.x += this.vx * dt + perpX * wobble * 0.1;
+    this.y += this.vy * dt + perpY * wobble * 0.1;
     const progress = this.elapsed / this.duration;
     const scale = 0.3 + progress * progress * 8;
-    // Gas blob trail — irregular, diffuse
+
+    // Trail accumulation — stack points with age
     this.trail.push({
-      x: this.x + rand(-15, 15) * scale,
-      y: this.y + rand(-15, 15) * scale,
-      vx: rand(-30, 30), vy: rand(-30, 30),
-      life: rand(0.6, 1.5), maxLife: rand(0.6, 1.5),
-      size: rand(8, 25) * scale,
-      hue: randInt(15, 40),
+      x: this.x + perpX * wobble * 0.6,
+      y: this.y + perpY * wobble * 0.6,
+      age: 1.0,
+      scale,
     });
-    if (this.trail.length > 150) this.trail.shift();
+    // Age existing trail points
+    this.trail.forEach(p => p.age -= 0.03);
+    this.trail = this.trail.filter(p => p.age > 0);
+    if (this.trail.length > 200) this.trail.splice(0, this.trail.length - 200);
+
+    // Dust emission — small particles ejected along path
+    if (Math.random() < 0.7) {
+      this.dust.push({
+        x: this.x + rand(-20, 20) * scale,
+        y: this.y + rand(-20, 20) * scale,
+        vx: rand(-40, 40), vy: rand(-40, 20),
+        life: rand(0.4, 1.2), maxLife: rand(0.4, 1.2),
+        size: rand(1, 3.5),
+      });
+    }
+    this.dust.forEach(d => {
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      d.vy += 15 * dt; // gravity
+      d.life -= dt;
+    });
+    this.dust = this.dust.filter(d => d.life > 0);
+    if (this.dust.length > 300) this.dust.splice(0, this.dust.length - 300);
+
     const d = dist({x: this.x, y: this.y}, {x: this.targetX, y: this.targetY});
     if (d < 100) { this.alive = false; return 'impact'; }
     return null;
@@ -193,65 +219,92 @@ class Meteor {
     const progress = Math.min(1, this.elapsed / this.duration);
     const scale = 0.3 + progress * progress * 8;
     const glowR = 50 * scale;
-    // --- Irregular flame using multiple offset blobs ---
+
+    // --- Thermal trail (continuous line with thermal gradient) ---
+    if (this.trail.length > 2) {
+      // Wide glow layer
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.shadowBlur = 20; ctx.shadowColor = 'rgba(255,120,20,0.6)';
+      ctx.beginPath(); ctx.moveTo(this.trail[0].x, this.trail[0].y);
+      for (let i = 1; i < this.trail.length; i++) {
+        const p = this.trail[i];
+        ctx.lineWidth = (1 + p.age * 6) * p.scale;
+        ctx.strokeStyle = `rgba(255,${Math.floor(100+p.age*100)},${Math.floor(30+p.age*30)},${p.age*0.5})`;
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+      // Core line
+      ctx.shadowBlur = 6; ctx.shadowColor = 'rgba(255,200,100,0.8)';
+      ctx.beginPath(); ctx.moveTo(this.trail[0].x, this.trail[0].y);
+      for (let i = 1; i < this.trail.length; i++) {
+        const p = this.trail[i];
+        ctx.lineWidth = (0.5 + p.age * 2.5) * p.scale;
+        ctx.strokeStyle = `rgba(255,${Math.floor(180+p.age*75)},${Math.floor(100+p.age*100)},${p.age*0.7})`;
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+      // White hot core
+      ctx.shadowBlur = 0;
+      ctx.beginPath(); ctx.moveTo(this.trail[0].x, this.trail[0].y);
+      for (let i = 1; i < this.trail.length; i++) {
+        const p = this.trail[i];
+        if (p.age < 0.3) continue;
+        ctx.lineWidth = 1 * p.scale * p.age;
+        ctx.strokeStyle = `rgba(255,255,255,${p.age*0.8})`;
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+    }
+
+    // --- Dust particles (grey ash + embers) ---
+    this.dust.forEach(d => {
+      const a = Math.max(0, d.life / d.maxLife);
+      // Grey ash
+      ctx.globalAlpha = a * 0.4;
+      ctx.fillStyle = `rgba(180,160,140,1)`;
+      ctx.beginPath(); ctx.arc(d.x, d.y, d.size * a, 0, Math.PI*2); ctx.fill();
+      // Ember glow on some
+      if (d.size > 2) {
+        ctx.globalAlpha = a * 0.3;
+        ctx.fillStyle = '#ff9944';
+        ctx.beginPath(); ctx.arc(d.x, d.y, d.size * 2 * a, 0, Math.PI*2); ctx.fill();
+      }
+    });
+
+    // --- Irregular flame head ---
     const flameBlobs = 8;
     for (let i = 0; i < flameBlobs; i++) {
-      const ba = (i / flameBlobs) * Math.PI * 2 + this.elapsed * 3 + i;
-      const bx = this.x + Math.cos(ba) * glowR * rand(0.2, 0.55);
-      const by = this.y + Math.sin(ba) * glowR * rand(0.2, 0.55);
+      const ba = (i/flameBlobs)*Math.PI*2 + this.elapsed*3;
+      const bx = this.x + Math.cos(ba)*glowR*rand(0.2,0.55);
+      const by = this.y + Math.sin(ba)*glowR*rand(0.2,0.55);
       const br = glowR * rand(0.3, 0.7);
       const g = ctx.createRadialGradient(bx, by, 0, bx, by, br);
       g.addColorStop(0, `rgba(255,${randInt(150,220)},${randInt(40,120)},0.7)`);
       g.addColorStop(0.5, `rgba(255,${randInt(80,150)},0,0.35)`);
       g.addColorStop(1, 'transparent');
+      ctx.globalAlpha = 1;
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI*2); ctx.fill();
     }
-    // Main glow (overlay)
-    const mainG = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowR * 0.6);
-    mainG.addColorStop(0, '#fff');
-    mainG.addColorStop(0.2, '#ffeebb');
-    mainG.addColorStop(0.5, 'rgba(255,150,50,0.4)');
-    mainG.addColorStop(1, 'transparent');
+    // Main glow overlay
+    const mainG = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowR*0.6);
+    mainG.addColorStop(0, '#fff'); mainG.addColorStop(0.2, '#ffeebb');
+    mainG.addColorStop(0.5, 'rgba(255,150,50,0.4)'); mainG.addColorStop(1, 'transparent');
     ctx.fillStyle = mainG;
-    ctx.beginPath(); ctx.arc(this.x, this.y, glowR * 0.6, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(this.x, this.y, glowR*0.6, 0, Math.PI*2); ctx.fill();
     // Hot core
+    ctx.globalAlpha = 1;
     ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, 6 * scale, 0, Math.PI * 2);
-    ctx.fill();
-    // Spark embers at flame edge
+    ctx.beginPath(); ctx.arc(this.x, this.y, 6*scale, 0, Math.PI*2); ctx.fill();
+    // Spark embers
     for (let i = 0; i < 5; i++) {
-      const sa = rand(0, Math.PI*2);
-      const sr = glowR * rand(0.5, 0.9);
-      ctx.globalAlpha = rand(0.4, 0.9);
-      ctx.fillStyle = '#ffcc44';
+      const sa = rand(0, Math.PI*2); const sr = glowR * rand(0.5, 0.9);
+      ctx.globalAlpha = rand(0.4, 0.9); ctx.fillStyle = '#ffcc44';
       ctx.beginPath();
-      ctx.arc(this.x + Math.cos(sa)*sr, this.y + Math.sin(sa)*sr, rand(1,3), 0, Math.PI*2);
+      ctx.arc(this.x+Math.cos(sa)*sr, this.y+Math.sin(sa)*sr, rand(1,3), 0, Math.PI*2);
       ctx.fill();
     }
-    // Gas trail — irregular blobs with layered gradients
-    this.trail.forEach(p => {
-      p.x += p.vx * 0.016;
-      p.y += p.vy * 0.016;
-      p.life -= 0.016;
-      if (p.life <= 0) return;
-      const a = Math.max(0, p.life / p.maxLife);
-      // Each blob: 2-3 overlapping offset gradients
-      const blobs = 3;
-      for (let b = 0; b < blobs; b++) {
-        const ox = p.x + rand(-0.5, 0.5) * p.size * 0.5;
-        const oy = p.y + rand(-0.5, 0.5) * p.size * 0.5;
-        const r = p.size * rand(0.4, 0.8) * a;
-        const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, r);
-        const hue = p.hue + rand(-8, 8);
-        g.addColorStop(0, `hsla(${hue},90%,${rand(55,80)}%,${a*0.5})`);
-        g.addColorStop(0.6, `hsla(${hue},80%,${rand(40,60)}%,${a*0.2})`);
-        g.addColorStop(1, 'transparent');
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(ox, oy, r, 0, Math.PI*2); ctx.fill();
-      }
-    });
+    ctx.globalAlpha = 1;
   }
 }
 
