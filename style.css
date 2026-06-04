@@ -226,9 +226,6 @@ h1, h2, h3 {
   transform: scale(3.5);
   opacity: 0.12;
 }
-.theme-icon-dark, .theme-icon-light {
-  transition: opacity 0.3s ease;
-}
 [data-theme="dark"] .theme-icon-light { opacity: 0; pointer-events: none; }
 [data-theme="light"] .theme-icon-dark { opacity: 0; pointer-events: none; }
 
@@ -681,9 +678,13 @@ body.cosmic .global-footer {
 /* Theme toggle inside nav — overrides fixed positioning */
 .global-nav .theme-toggle {
   position: relative;
-  margin-left: auto;
+  margin-left: 1.5rem;
   flex-shrink: 0;
   z-index: auto;
+  top: auto; right: auto;
+}
+.global-nav .theme-toggle::after {
+  display: none; /* no ripple needed in nav */
 }
 
 /* Push slide content below nav */
