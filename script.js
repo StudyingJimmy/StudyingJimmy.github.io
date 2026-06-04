@@ -308,48 +308,63 @@ class Meteor {
   }
 }
 
-// --- Glass Shatter (jittered cracks + rotation + debris) ----
+// --- Glass Shatter (radial cracks, fine lines, center-dense)
 class GlassShatter {
   constructor(x, y) {
     this.x = x; this.y = y;
     const diag = Math.sqrt(W*W + H*H);
-    // Fractal seed distribution — strong center clustering
-    const seeds = [{x, y}];
-    const count = 55;
-    for (let i = 0; i < count; i++) {
-      const a = rand(0, Math.PI*2);
-      const d = diag * Math.pow(Math.random(), 5) * 1.2;
-      seeds.push({x: x + Math.cos(a)*d, y: y + Math.sin(a)*d});
-    }
-    // Build crack edges with jittered paths
+    // Radial cracks: spoke-like from center outward
     this.cracks = [];
-    for (let i = 0; i < seeds.length; i++) {
-      const si = seeds[i];
-      const dists = [];
-      for (let j = i+1; j < seeds.length; j++) {
-        const d = Math.sqrt((si.x-seeds[j].x)**2 + (si.y-seeds[j].y)**2);
-        if (d < diag*0.5) dists.push({j, d});
-      }
-      dists.sort((a,b) => a.d-b.d);
-      dists.slice(0, 3).forEach(n => {
-        const sj = seeds[n.j];
-        const isPri = i===0;
+    const spokeCount = 30; // primary radial spokes
+    for (let i = 0; i < spokeCount; i++) {
+      const a = (i/spokeCount)*Math.PI*2 + rand(-0.08, 0.08);
+      const len = diag * rand(0.4, 0.9);
+      const ex = x + Math.cos(a)*len;
+      const ey = y + Math.sin(a)*len;
+      this.cracks.push({
+        points: this.jitterPath({x,y}, {x:ex,y:ey}, 6),
+        isPrimary: true,
+        progress: 0, delay: rand(0, 0.06),
+        life: rand(0.3, 0.7), maxLife: rand(0.3, 0.7),
+        baseWidth: rand(0.8, 2),
+      });
+      // Secondary branch spokes (shorter, branching off main)
+      if (Math.random() < 0.5) {
+        const ba = a + rand(-0.4, 0.4);
+        const bl = len * rand(0.3, 0.6);
+        const bx = x + Math.cos(a)*len*0.3 + Math.cos(ba)*bl;
+        const by = y + Math.sin(a)*len*0.3 + Math.sin(ba)*bl;
         this.cracks.push({
-          points: this.jitterPath(si, sj, isPri ? 5 : 3),
-          isPrimary: isPri,
-          progress: 0,
-          delay: rand(0, 0.1),
-          life: rand(0.3, 0.8), maxLife: rand(0.3, 0.8),
-          baseWidth: isPri ? rand(1.5, 3.5) : rand(0.5, 1.5),
+          points: this.jitterPath({x: x+Math.cos(a)*len*0.3, y: y+Math.sin(a)*len*0.3}, {x:bx, y:by}, 4),
+          isPrimary: false,
+          progress: 0, delay: rand(0.02, 0.1),
+          life: rand(0.25, 0.6), maxLife: rand(0.25, 0.6),
+          baseWidth: rand(0.3, 0.8),
         });
+      }
+    }
+    // Extra fine cracks: dense near center, sparse outward
+    const fineCount = 40;
+    for (let i = 0; i < fineCount; i++) {
+      const a = rand(0, Math.PI*2);
+      const d = diag * Math.pow(Math.random(), 4) * 1.0;
+      const ex = x + Math.cos(a)*d;
+      const ey = y + Math.sin(a)*d;
+      this.cracks.push({
+        points: this.jitterPath({x, y}, {x:ex, y:ey}, 5),
+        isPrimary: false,
+        progress: 0, delay: rand(0.03, 0.15),
+        life: rand(0.2, 0.5), maxLife: rand(0.2, 0.5),
+        baseWidth: rand(0.2, 0.6),
       });
     }
-    // Fragment rotation + displacement
-    this.fragments = seeds.map(s => {
-      const dx = s.x - x, dy = s.y - y;
+    // Fragment displacement from crack endpoints
+    this.fragments = this.cracks.filter(c => c.isPrimary).map(c => {
+      const ep = c.points[c.points.length-1];
+      const dx = ep.x - x, dy = ep.y - y;
       const dist = Math.sqrt(dx*dx+dy*dy) || 1;
       return {
-        sx: s.x, sy: s.y,
+        sx: ep.x, sy: ep.y,
         ox: (dx/dist) * rand(3, 15),
         oy: (dy/dist) * rand(3, 15),
         rot: rand(-0.03, 0.03),
