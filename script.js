@@ -313,67 +313,65 @@ class GlassShatter {
   constructor(x, y) {
     this.x = x; this.y = y;
     const diag = Math.sqrt(W*W + H*H);
-    // Hollow crater matching meteor size, cracks from rim outward
-    this.craterR = 80; // matches meteor core at impact (6 * 15 ≈ 90)
+    // Hollow crater — cracks from jittered rim, fractal zigzag paths
+    this.craterR = 80;
     this.cracks = [];
-    const spokeCount = 35;
-    for (let i = 0; i < spokeCount; i++) {
-      const a = (i/spokeCount)*Math.PI*2 + rand(-0.06, 0.06);
-      const sx = x + Math.cos(a)*this.craterR; // start at crater rim
-      const sy = y + Math.sin(a)*this.craterR;
-      const len = diag * rand(0.35, 0.85);
-      const ex = x + Math.cos(a)*len;
-      const ey = y + Math.sin(a)*len;
-      this.cracks.push({
-        points: this.jitterPath({x:sx, y:sy}, {x:ex, y:ey}, 6),
-        isPrimary: true,
-        progress: 0, delay: rand(0, 0.06),
-        life: rand(0.3, 0.7), maxLife: rand(0.3, 0.7),
-        baseWidth: rand(0.8, 2),
-      });
-      // Branch from rim
-      if (Math.random() < 0.4) {
-        const ba = a + rand(-0.35, 0.35);
-        const bl = len * rand(0.35, 0.6);
+    // Generate fractal crack segments from rim outward
+    const buildFracture = (sx, sy, angle, len, depth, isPri) => {
+      if (depth <= 0 || len < 8) return;
+      const segLen = len * rand(0.08, 0.18);
+      const steps = randInt(2, 5);
+      let cx = sx, cy = sy, ca = angle;
+      for (let s = 0; s < steps; s++) {
+        ca += rand(-0.2, 0.2); // zigzag
+        const nx = cx + Math.cos(ca) * segLen;
+        const ny = cy + Math.sin(ca) * segLen;
         this.cracks.push({
-          points: this.jitterPath(
-            {x: x+Math.cos(a)*this.craterR*1.2, y: y+Math.sin(a)*this.craterR*1.2},
-            {x: x+Math.cos(a)*len*0.25+Math.cos(ba)*bl, y: y+Math.sin(a)*len*0.25+Math.sin(ba)*bl}, 4),
-          isPrimary: false,
-          progress: 0, delay: rand(0.02, 0.1),
-          life: rand(0.25, 0.6), maxLife: rand(0.25, 0.6),
-          baseWidth: rand(0.3, 0.8),
+          x1: cx, y1: cy, x2: nx, y2: ny,
+          isPrimary: isPri,
+          progress: 0, delay: rand(0, depth*0.02),
+          life: rand(0.25, 0.65), maxLife: rand(0.25, 0.65),
+          baseWidth: isPri ? rand(0.6, 1.8) : rand(0.2, 0.6),
         });
+        cx = nx; cy = ny;
       }
+      // Branch: attach smaller cracks from midpoint
+      if (depth >= 2 && Math.random() < 0.35) {
+        const mt = rand(0.3, 0.7);
+        const mx = sx + Math.cos(angle)*len*mt;
+        const my = sy + Math.sin(angle)*len*mt;
+        const ba = angle + rand(-0.7, 0.7);
+        buildFracture(mx, my, ba, len*rand(0.2, 0.45), depth-1, false);
+      }
+    };
+    // Primary spokes from jittered rim positions
+    const spokeCount = 30;
+    for (let i = 0; i < spokeCount; i++) {
+      const a = (i/spokeCount)*Math.PI*2 + rand(-0.07, 0.07);
+      const rJit = this.craterR * rand(0.7, 1.4); // jittered start radius
+      const sx = x + Math.cos(a)*rJit;
+      const sy = y + Math.sin(a)*rJit;
+      const len = diag * rand(0.35, 0.85);
+      buildFracture(sx, sy, a, len, 4, true);
     }
-    // Fine cracks: dense at rim, sparse outward
-    const fineCount = 50;
+    // Dense fine cracks from rim — shorter, thinner
+    const fineCount = 45;
     for (let i = 0; i < fineCount; i++) {
       const a = rand(0, Math.PI*2);
-      const d = diag * Math.pow(Math.random(), 4) * 0.9;
-      const sx = x + Math.cos(a)*this.craterR;
-      const sy = y + Math.sin(a)*this.craterR;
-      const ex = x + Math.cos(a)*d;
-      const ey = y + Math.sin(a)*d;
-      this.cracks.push({
-        points: this.jitterPath({x:sx, y:sy}, {x:ex, y:ey}, 5),
-        isPrimary: false,
-        progress: 0, delay: rand(0.03, 0.15),
-        life: rand(0.2, 0.5), maxLife: rand(0.2, 0.5),
-        baseWidth: rand(0.2, 0.5),
-      });
+      const rJit = this.craterR * rand(0.6, 1.5);
+      const sx = x + Math.cos(a)*rJit;
+      const sy = y + Math.sin(a)*rJit;
+      const len = diag * Math.pow(Math.random(), 3.5) * 0.8;
+      buildFracture(sx, sy, a, len, 3, false);
     }
     // Fragment displacement from crack endpoints
-    this.fragments = this.cracks.filter(c => c.isPrimary).map(c => {
-      const ep = c.points[c.points.length-1];
-      const dx = ep.x - x, dy = ep.y - y;
+    this.fragments = this.cracks.filter(c => c.isPrimary).slice(0, 20).map(c => {
+      const dx = c.x2 - x, dy = c.y2 - y;
       const dist = Math.sqrt(dx*dx+dy*dy) || 1;
       return {
-        sx: ep.x, sy: ep.y,
-        ox: (dx/dist) * rand(3, 15),
-        oy: (dy/dist) * rand(3, 15),
-        rot: rand(-0.03, 0.03),
-        settled: false,
+        sx: c.x2, sy: c.y2,
+        ox: (dx/dist)*rand(3,12), oy: (dy/dist)*rand(3,12),
+        rot: rand(-0.03,0.03), settled: false,
       };
     });
     // Glass debris — tiny chips along cracks
@@ -389,19 +387,6 @@ class GlassShatter {
     }
     this.ringR = 0; this.ringMax = diag*0.6;
     this.flashAlpha = 1.0; this.alive = true; this.elapsed = 0;
-  }
-  // Generate jagged intermediate points along a crack
-  jitterPath(p1, p2, steps) {
-    const pts = [{x: p1.x, y: p1.y}];
-    for (let i = 1; i < steps; i++) {
-      const r = i / steps;
-      const px = p1.x + (p2.x-p1.x)*r;
-      const py = p1.y + (p2.y-p1.y)*r;
-      const jit = 8 * (1 - Math.abs(r-0.5)*2); // max jitter at midpoint
-      pts.push({x: px + (Math.random()-0.5)*jit, y: py + (Math.random()-0.5)*jit});
-    }
-    pts.push({x: p2.x, y: p2.y});
-    return pts;
   }
   update(dt) {
     this.elapsed += dt;
@@ -454,31 +439,28 @@ class GlassShatter {
     ctx.lineCap = 'round';
     ctx.globalCompositeOperation = 'screen';
     this.cracks.forEach(c => {
-      if (c.delay > 0 || c.progress <= 0 || c.life <= 0 || c.points.length < 2) return;
+      if (c.delay > 0 || c.progress <= 0 || c.life <= 0) return;
       const p = c.progress;
       const ep = 1 - Math.pow(1-p, 3);
       const a = Math.max(0, c.life/c.maxLife);
-      const maxIdx = Math.floor((c.points.length-1) * ep);
-      const wobble = 1 + Math.sin(p*20)*0.4; // crystalline fluctuation
-      // Glow layer
-      ctx.shadowBlur = c.isPrimary ? 10 : 4;
-      ctx.shadowColor = 'rgba(200,230,255,0.8)';
+      const ex = c.x1 + (c.x2-c.x1)*ep;
+      const ey = c.y1 + (c.y2-c.y1)*ep;
+      const wobble = 1 + Math.sin(p*25)*0.35;
+      // Glow
+      ctx.shadowBlur = c.isPrimary ? 8 : 3;
+      ctx.shadowColor = 'rgba(200,230,255,0.7)';
       ctx.globalAlpha = a*0.5;
       ctx.strokeStyle = 'rgba(180,210,255,0.9)';
-      ctx.lineWidth = (c.baseWidth+2)*wobble;
-      ctx.beginPath(); ctx.moveTo(c.points[0].x, c.points[0].y);
-      for (let i = 1; i <= maxIdx; i++) ctx.lineTo(c.points[i].x, c.points[i].y);
-      ctx.stroke();
+      ctx.lineWidth = (c.baseWidth+1.5)*wobble;
+      ctx.beginPath(); ctx.moveTo(c.x1, c.y1); ctx.lineTo(ex, ey); ctx.stroke();
       // Core
       ctx.shadowBlur = 0;
       ctx.globalAlpha = a;
       ctx.strokeStyle = 'rgba(255,255,255,0.95)';
       ctx.lineWidth = c.baseWidth*wobble;
-      ctx.beginPath(); ctx.moveTo(c.points[0].x, c.points[0].y);
-      for (let i = 1; i <= maxIdx; i++) ctx.lineTo(c.points[i].x, c.points[i].y);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(c.x1, c.y1); ctx.lineTo(ex, ey); ctx.stroke();
     });
-    ctx.globalCompositeOperation = 'source-over'; // reset
+    ctx.globalCompositeOperation = 'source-over';
   }
 }
 
