@@ -308,20 +308,20 @@ class Meteor {
   }
 }
 
-// --- Glass Shatter (fragments + crack growth + displacement) -
+// --- Glass Shatter (jittered cracks + rotation + debris) ----
 class GlassShatter {
   constructor(x, y) {
     this.x = x; this.y = y;
     const diag = Math.sqrt(W*W + H*H);
-    // Generate seed points — density falls off from impact
+    // Fractal seed distribution — strong center clustering
     const seeds = [{x, y}];
-    const count = 50;
+    const count = 55;
     for (let i = 0; i < count; i++) {
       const a = rand(0, Math.PI*2);
-      const d = diag * Math.pow(Math.random(), 1.4) * 0.6;
+      const d = diag * Math.pow(Math.random(), 2.5) * 0.4;
       seeds.push({x: x + Math.cos(a)*d, y: y + Math.sin(a)*d});
     }
-    // Build crack edges (connect each seed to 2-3 nearest neighbors)
+    // Build crack edges with jittered paths
     this.cracks = [];
     for (let i = 0; i < seeds.length; i++) {
       const si = seeds[i];
@@ -335,63 +335,82 @@ class GlassShatter {
         const sj = seeds[n.j];
         const isPri = i===0;
         this.cracks.push({
-          x1: si.x, y1: si.y, x2: sj.x, y2: sj.y,
+          points: this.jitterPath(si, sj, isPri ? 5 : 3),
           isPrimary: isPri,
           progress: 0,
-          delay: rand(0, 0.12),
+          delay: rand(0, 0.1),
           life: rand(0.3, 0.8), maxLife: rand(0.3, 0.8),
-          width: isPri ? rand(1.5, 3.5) : rand(0.5, 1.5),
+          baseWidth: isPri ? rand(1.5, 3.5) : rand(0.5, 1.5),
         });
       });
     }
-    // Fragment displacement: each seed shifts outward from impact
+    // Fragment rotation + displacement
     this.fragments = seeds.map(s => {
       const dx = s.x - x, dy = s.y - y;
       const dist = Math.sqrt(dx*dx+dy*dy) || 1;
       return {
         sx: s.x, sy: s.y,
-        ox: (dx/dist) * rand(3, 12),
-        oy: (dy/dist) * rand(3, 12),
+        ox: (dx/dist) * rand(3, 15),
+        oy: (dy/dist) * rand(3, 15),
+        rot: rand(-0.03, 0.03),
         settled: false,
       };
     });
-    // Shockwave ring
-    this.ringR = 0;
-    this.ringMax = diag * 0.6;
-    this.flashAlpha = 1.0;
-    this.alive = true;
-    this.elapsed = 0;
+    // Glass debris — tiny chips along cracks
+    this.chips = [];
+    for (let i = 0; i < 80; i++) {
+      this.chips.push({
+        x: x + rand(-diag*0.3, diag*0.3),
+        y: y + rand(-diag*0.3, diag*0.3),
+        vx: rand(-80, 80), vy: rand(-80, 80),
+        life: rand(0.2, 0.6), maxLife: rand(0.2, 0.6),
+        size: rand(0.5, 2),
+      });
+    }
+    this.ringR = 0; this.ringMax = diag*0.6;
+    this.flashAlpha = 1.0; this.alive = true; this.elapsed = 0;
+  }
+  // Generate jagged intermediate points along a crack
+  jitterPath(p1, p2, steps) {
+    const pts = [{x: p1.x, y: p1.y}];
+    for (let i = 1; i < steps; i++) {
+      const r = i / steps;
+      const px = p1.x + (p2.x-p1.x)*r;
+      const py = p1.y + (p2.y-p1.y)*r;
+      const jit = 8 * (1 - Math.abs(r-0.5)*2); // max jitter at midpoint
+      pts.push({x: px + (Math.random()-0.5)*jit, y: py + (Math.random()-0.5)*jit});
+    }
+    pts.push({x: p2.x, y: p2.y});
+    return pts;
   }
   update(dt) {
     this.elapsed += dt;
     this.flashAlpha = Math.max(0, 1 - this.elapsed/0.06);
-    this.ringR += dt * Math.max(W,H) * 2;
-    // Crack growth
+    this.ringR += dt * Math.max(W,H)*2;
     this.cracks.forEach(c => {
       c.delay -= dt;
       if (c.delay <= 0 && c.progress < 1) c.progress = Math.min(1, c.progress + dt*10);
       if (c.progress >= 1) c.life -= dt;
     });
-    // Fragment recovery: settle back after 0.3s
     this.fragments.forEach(f => {
       if (this.elapsed > 0.3 && !f.settled) {
-        f.ox *= 0.9; f.oy *= 0.9;
-        if (Math.abs(f.ox) < 0.3 && Math.abs(f.oy) < 0.3) f.settled = true;
+        f.ox *= 0.88; f.oy *= 0.88; f.rot *= 0.88;
+        if (Math.abs(f.ox) < 0.3) f.settled = true;
       }
     });
+    this.chips.forEach(ch => { ch.x += ch.vx*dt; ch.y += ch.vy*dt; ch.life -= dt; });
     if (this.elapsed > 1.5) this.alive = false;
   }
   draw(ctx) {
     // Flash
     if (this.flashAlpha > 0) {
-      ctx.globalAlpha = this.flashAlpha * 0.8;
-      ctx.fillStyle = '#fff';
+      ctx.globalAlpha = this.flashAlpha*0.8; ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, W, H);
     }
     // Shockwave
     if (this.ringR < this.ringMax) {
-      ctx.globalAlpha = Math.max(0, 0.5 - this.elapsed/0.5);
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 5*(1 - this.elapsed/1.5);
+      ctx.globalAlpha = Math.max(0, 0.5-this.elapsed/0.5);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 5*(1-this.elapsed/1.5);
       ctx.beginPath(); ctx.arc(this.x, this.y, this.ringR, 0, Math.PI*2); ctx.stroke();
     }
     // Center glow
@@ -402,30 +421,44 @@ class GlassShatter {
       g.addColorStop(0, `rgba(255,255,255,${ca})`);
       g.addColorStop(0.4, `rgba(255,200,100,${ca*0.5})`);
       g.addColorStop(1, 'transparent');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(this.x, this.y, cr, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(this.x, this.y, cr, 0, Math.PI*2); ctx.fill();
     }
-    // Cracks with glass highlight
+    // Glass chips (tiny bright specks)
+    this.chips.forEach(ch => {
+      if (ch.life <= 0) return;
+      const a = Math.max(0, ch.life/ch.maxLife);
+      ctx.globalAlpha = a; ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(ch.x, ch.y, ch.size*a, 0, Math.PI*2); ctx.fill();
+    });
+    // Cracks with screen blend + crystalline width wobble
     ctx.lineCap = 'round';
+    ctx.globalCompositeOperation = 'screen';
     this.cracks.forEach(c => {
-      if (c.delay > 0 || c.progress <= 0 || c.life <= 0) return;
+      if (c.delay > 0 || c.progress <= 0 || c.life <= 0 || c.points.length < 2) return;
       const p = c.progress;
       const ep = 1 - Math.pow(1-p, 3);
       const a = Math.max(0, c.life/c.maxLife);
-      const ex = c.x1 + (c.x2-c.x1)*ep;
-      const ey = c.y1 + (c.y2-c.y1)*ep;
-      ctx.shadowBlur = c.isPrimary ? 8 : 3;
-      ctx.shadowColor = 'rgba(255,255,255,0.7)';
+      const maxIdx = Math.floor((c.points.length-1) * ep);
+      const wobble = 1 + Math.sin(p*20)*0.4; // crystalline fluctuation
+      // Glow layer
+      ctx.shadowBlur = c.isPrimary ? 10 : 4;
+      ctx.shadowColor = 'rgba(200,230,255,0.8)';
       ctx.globalAlpha = a*0.5;
-      ctx.strokeStyle = 'rgba(200,220,255,0.9)';
-      ctx.lineWidth = c.width + 2;
-      ctx.beginPath(); ctx.moveTo(c.x1, c.y1); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.strokeStyle = 'rgba(180,210,255,0.9)';
+      ctx.lineWidth = (c.baseWidth+2)*wobble;
+      ctx.beginPath(); ctx.moveTo(c.points[0].x, c.points[0].y);
+      for (let i = 1; i <= maxIdx; i++) ctx.lineTo(c.points[i].x, c.points[i].y);
+      ctx.stroke();
+      // Core
       ctx.shadowBlur = 0;
       ctx.globalAlpha = a;
       ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-      ctx.lineWidth = c.width;
-      ctx.beginPath(); ctx.moveTo(c.x1, c.y1); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.lineWidth = c.baseWidth*wobble;
+      ctx.beginPath(); ctx.moveTo(c.points[0].x, c.points[0].y);
+      for (let i = 1; i <= maxIdx; i++) ctx.lineTo(c.points[i].x, c.points[i].y);
+      ctx.stroke();
     });
+    ctx.globalCompositeOperation = 'source-over'; // reset
   }
 }
 
