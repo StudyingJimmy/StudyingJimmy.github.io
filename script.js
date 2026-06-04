@@ -313,29 +313,32 @@ class GlassShatter {
   constructor(x, y) {
     this.x = x; this.y = y;
     const diag = Math.sqrt(W*W + H*H);
-    // Radial cracks: spoke-like from center outward
+    // Hollow crater matching meteor size, cracks from rim outward
+    this.craterR = 80; // matches meteor core at impact (6 * 15 ≈ 90)
     this.cracks = [];
-    const spokeCount = 30; // primary radial spokes
+    const spokeCount = 35;
     for (let i = 0; i < spokeCount; i++) {
-      const a = (i/spokeCount)*Math.PI*2 + rand(-0.08, 0.08);
-      const len = diag * rand(0.4, 0.9);
+      const a = (i/spokeCount)*Math.PI*2 + rand(-0.06, 0.06);
+      const sx = x + Math.cos(a)*this.craterR; // start at crater rim
+      const sy = y + Math.sin(a)*this.craterR;
+      const len = diag * rand(0.35, 0.85);
       const ex = x + Math.cos(a)*len;
       const ey = y + Math.sin(a)*len;
       this.cracks.push({
-        points: this.jitterPath({x,y}, {x:ex,y:ey}, 6),
+        points: this.jitterPath({x:sx, y:sy}, {x:ex, y:ey}, 6),
         isPrimary: true,
         progress: 0, delay: rand(0, 0.06),
         life: rand(0.3, 0.7), maxLife: rand(0.3, 0.7),
         baseWidth: rand(0.8, 2),
       });
-      // Secondary branch spokes (shorter, branching off main)
-      if (Math.random() < 0.5) {
-        const ba = a + rand(-0.4, 0.4);
-        const bl = len * rand(0.3, 0.6);
-        const bx = x + Math.cos(a)*len*0.3 + Math.cos(ba)*bl;
-        const by = y + Math.sin(a)*len*0.3 + Math.sin(ba)*bl;
+      // Branch from rim
+      if (Math.random() < 0.4) {
+        const ba = a + rand(-0.35, 0.35);
+        const bl = len * rand(0.35, 0.6);
         this.cracks.push({
-          points: this.jitterPath({x: x+Math.cos(a)*len*0.3, y: y+Math.sin(a)*len*0.3}, {x:bx, y:by}, 4),
+          points: this.jitterPath(
+            {x: x+Math.cos(a)*this.craterR*1.2, y: y+Math.sin(a)*this.craterR*1.2},
+            {x: x+Math.cos(a)*len*0.25+Math.cos(ba)*bl, y: y+Math.sin(a)*len*0.25+Math.sin(ba)*bl}, 4),
           isPrimary: false,
           progress: 0, delay: rand(0.02, 0.1),
           life: rand(0.25, 0.6), maxLife: rand(0.25, 0.6),
@@ -343,19 +346,21 @@ class GlassShatter {
         });
       }
     }
-    // Extra fine cracks: dense near center, sparse outward
-    const fineCount = 40;
+    // Fine cracks: dense at rim, sparse outward
+    const fineCount = 50;
     for (let i = 0; i < fineCount; i++) {
       const a = rand(0, Math.PI*2);
-      const d = diag * Math.pow(Math.random(), 4) * 1.0;
+      const d = diag * Math.pow(Math.random(), 4) * 0.9;
+      const sx = x + Math.cos(a)*this.craterR;
+      const sy = y + Math.sin(a)*this.craterR;
       const ex = x + Math.cos(a)*d;
       const ey = y + Math.sin(a)*d;
       this.cracks.push({
-        points: this.jitterPath({x, y}, {x:ex, y:ey}, 5),
+        points: this.jitterPath({x:sx, y:sy}, {x:ex, y:ey}, 5),
         isPrimary: false,
         progress: 0, delay: rand(0.03, 0.15),
         life: rand(0.2, 0.5), maxLife: rand(0.2, 0.5),
-        baseWidth: rand(0.2, 0.6),
+        baseWidth: rand(0.2, 0.5),
       });
     }
     // Fragment displacement from crack endpoints
@@ -428,15 +433,15 @@ class GlassShatter {
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 5*(1-this.elapsed/1.5);
       ctx.beginPath(); ctx.arc(this.x, this.y, this.ringR, 0, Math.PI*2); ctx.stroke();
     }
-    // Center glow
-    const cr = 30 + this.elapsed*180;
-    const ca = Math.max(0, 0.7-this.elapsed/0.6);
-    if (ca > 0) {
-      const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, cr);
-      g.addColorStop(0, `rgba(255,255,255,${ca})`);
-      g.addColorStop(0.4, `rgba(255,200,100,${ca*0.5})`);
+    // Crater rim glow (ring around the hole)
+    const rimAlpha = Math.max(0, 0.7-this.elapsed/0.6);
+    if (rimAlpha > 0) {
+      const g = ctx.createRadialGradient(this.x, this.y, this.craterR*0.7, this.x, this.y, this.craterR*1.6);
+      g.addColorStop(0, 'transparent');
+      g.addColorStop(0.3, `rgba(255,200,100,${rimAlpha*0.6})`);
+      g.addColorStop(0.6, `rgba(255,150,50,${rimAlpha*0.3})`);
       g.addColorStop(1, 'transparent');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(this.x, this.y, cr, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(this.x, this.y, this.craterR*1.6, 0, Math.PI*2); ctx.fill();
     }
     // Glass chips (tiny bright specks)
     this.chips.forEach(ch => {
