@@ -178,7 +178,7 @@ class Meteor {
     this.x += this.vx * dt + perpX * wobble * 0.1;
     this.y += this.vy * dt + perpY * wobble * 0.1;
     const progress = this.elapsed / this.duration;
-    const scale = 0.3 + progress * progress * 8;
+    const scale = 0.3 + progress * progress * 15;
 
     // Trail accumulation — stack points with age
     this.trail.push({
@@ -217,7 +217,7 @@ class Meteor {
   }
   draw(ctx) {
     const progress = Math.min(1, this.elapsed / this.duration);
-    const scale = 0.3 + progress * progress * 8;
+    const scale = 0.3 + progress * progress * 15;
     const glowR = 50 * scale;
 
     // --- Thermal trail (continuous line with thermal gradient) ---
