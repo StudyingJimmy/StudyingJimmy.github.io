@@ -174,11 +174,17 @@ class Meteor {
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     const progress = this.elapsed / this.duration;
-    const scale = 0.3 + progress * progress * 8; // max scale ~8.3
-    const trailSize = rand(4, 10) * scale;
-    this.trail.push(new Particle(this.x, this.y,
-      rand(-35, 35), rand(-35, 35), rand(0.4, 1.4), '#ff8844', trailSize));
-    if (this.trail.length > 120) this.trail.shift();
+    const scale = 0.3 + progress * progress * 8;
+    // Gas blob trail — irregular, diffuse
+    this.trail.push({
+      x: this.x + rand(-15, 15) * scale,
+      y: this.y + rand(-15, 15) * scale,
+      vx: rand(-30, 30), vy: rand(-30, 30),
+      life: rand(0.6, 1.5), maxLife: rand(0.6, 1.5),
+      size: rand(8, 25) * scale,
+      hue: randInt(15, 40),
+    });
+    if (this.trail.length > 150) this.trail.shift();
     const d = dist({x: this.x, y: this.y}, {x: this.targetX, y: this.targetY});
     if (d < 100) { this.alive = false; return 'impact'; }
     return null;
@@ -224,7 +230,28 @@ class Meteor {
       ctx.arc(this.x + Math.cos(sa)*sr, this.y + Math.sin(sa)*sr, rand(1,3), 0, Math.PI*2);
       ctx.fill();
     }
-    this.trail.forEach(p => { p.life -= 0.02; p.draw(ctx); });
+    // Gas trail — irregular blobs with layered gradients
+    this.trail.forEach(p => {
+      p.x += p.vx * 0.016;
+      p.y += p.vy * 0.016;
+      p.life -= 0.016;
+      if (p.life <= 0) return;
+      const a = Math.max(0, p.life / p.maxLife);
+      // Each blob: 2-3 overlapping offset gradients
+      const blobs = 3;
+      for (let b = 0; b < blobs; b++) {
+        const ox = p.x + rand(-0.5, 0.5) * p.size * 0.5;
+        const oy = p.y + rand(-0.5, 0.5) * p.size * 0.5;
+        const r = p.size * rand(0.4, 0.8) * a;
+        const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, r);
+        const hue = p.hue + rand(-8, 8);
+        g.addColorStop(0, `hsla(${hue},90%,${rand(55,80)}%,${a*0.5})`);
+        g.addColorStop(0.6, `hsla(${hue},80%,${rand(40,60)}%,${a*0.2})`);
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(ox, oy, r, 0, Math.PI*2); ctx.fill();
+      }
+    });
   }
 }
 
