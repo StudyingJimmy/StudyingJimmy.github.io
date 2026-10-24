@@ -9,10 +9,8 @@ const brain = new Brain();
 const scene = SCENARIOS[0];
 let busy = false;
 let toastTimer;
-// WebP keeps the portable EXE under a practical size while retaining the
-// animated character in Chromium-based classroom browsers.
-const idleGif = '../assets/lily-listening.webp';
-const talkGif = '../assets/lily-speaking.webp';
+const idleGif = '../assets/lily-listening.gif';
+const talkGif = '../assets/lily-speaking.gif';
 new Image().src = talkGif;
 function toast(message, ms = 4500) {
   const el = $('toast'); el.textContent = message; el.hidden = false;
