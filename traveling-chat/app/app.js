@@ -9,8 +9,8 @@ const brain = new Brain();
 const scene = SCENARIOS[0];
 let busy = false;
 let toastTimer;
-const idleGif = '../assets/lily-listening.gif';
-const talkGif = '../assets/lily-speaking.gif';
+const idleGif = '../assets/lily-listening.webp';
+const talkGif = '../assets/lily-speaking.webp';
 new Image().src = talkGif;
 function toast(message, ms = 4500) {
   const el = $('toast'); el.textContent = message; el.hidden = false;
