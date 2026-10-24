@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Traveling Chat · Lily 英语课堂</title><link rel="stylesheet" href="./styles.css" /></head>
+<body>
+<div id="file-warn" style="display:none;position:fixed;inset:0;z-index:9999;background:#FFF7F0;color:#3B2B26;font-family:'Microsoft YaHei',system-ui,sans-serif;padding:8vh 10vw;box-sizing:border-box">
+  <div style="font-size:15px;font-weight:800;letter-spacing:2px;color:#E1527E">用错了打开方式</div>
+  <div style="font-size:38px;font-weight:900;margin:14px 0 18px;line-height:1.25">不要双击 index.html</div>
+  <div style="font-size:19px;line-height:1.9">
+    这个页面必须由本地服务打开，直接双击文件时浏览器会禁止加载脚本、调用麦克风和访问模型接口，
+    所以看起来是“刷新没反应”。<br /><br />
+    正确做法：回到文件夹，双击 <b style="color:#E1527E">启动数字人.bat</b>，
+    它会自动开服务并打开页面（地址是 <code style="background:#FFE6D6;padding:2px 6px;border-radius:6px">http://127.0.0.1:7788/</code>）。
+  </div>
+</div>
+
+<div class="stage">
+  <aside class="avatar-panel">
+    <div class="avatar-card">
+      <div class="avatar-glow"></div>
+      <img id="avatar" class="avatar-img" src="../assets/lily-listening.webp" alt="对话伙伴" />
+      <div class="subtitle" id="subtitle"></div>
+      <div class="wave" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+    </div>
+    <div class="id-row"><div class="state" id="state"><i class="dot"></i><span>准备好了</span></div></div>
+  </aside>
+  <main class="chat-panel">
+    <header class="topbar"><div class="brand-title">寒假出游 · 交通方式</div><div class="top-actions"><span id="mode-badge" class="mode-badge">检查模型中…</span><button class="icon-btn" id="btn-fullscreen" title="全屏">⛶</button></div></header>
+    <div class="chat" id="chat" aria-live="polite"></div>
+    <div class="controls"><button id="mic" class="mic" title="点击开始或结束说话（空格键）"><span class="mic-ico">🎤</span><span class="mic-txt">点击说话</span></button><div class="type-row"><input id="typed" type="text" autocomplete="off" placeholder="也可以打字，按回车发送" /><button id="send" class="send">发送</button></div></div>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script>
+  // 直接双击 index.html 时 file:// 下 ES module / fetch / 麦克风都会被浏览器拦掉，
+  // 这里先给出明确提示，免得看到"空白页面 / 刷新没反应"。
+  if (location.protocol === 'file:') {
+    document.getElementById('file-warn').style.display = 'block';
+  }
+</script>
+<script src="./config.js"></script>
+<script type="module" src="./app.js"></script>
+</body></html>

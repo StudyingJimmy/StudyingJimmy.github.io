@@ -1,0 +1,14 @@
+{
+  "name": "traveling-chat-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-24",
+  "workers_dev": true,
+  "vars": {
+    "DASHSCOPE_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "CHAT_MODEL": "qwen-plus",
+    "ASR_MODEL": "qwen3-asr-flash",
+    "TTS_MODEL": "cosyvoice-v3-flash",
+    "TTS_VOICE": "longhuhu_v3",
+    "ALLOWED_ORIGIN": "https://studyingjimmy.github.io"
+  }
+}
