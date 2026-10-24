@@ -73,13 +73,15 @@ body{
   object-fit:contain; object-position:bottom center;
   transform:translateX(-50%);
   transform-origin:50% 92%;
-  transition:opacity .14s linear;
+  /* 两段透明背景的动画不能以淡入淡出切换，否则会短暂重叠。 */
+  visibility:hidden;
+  pointer-events:none;
   animation:none;
   filter:drop-shadow(0 18px 24px rgba(120,60,40,.18));
 }
-.avatar-talk{opacity:0;}
-.is-speaking .avatar-idle{opacity:0;}
-.is-speaking .avatar-talk{opacity:1;}
+.avatar-idle{visibility:visible;}
+.is-speaking .avatar-idle{visibility:hidden;}
+.is-speaking .avatar-talk{visibility:visible;}
 
 @keyframes breathe{0%,100%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-50%) scale(1.06);}}
 
