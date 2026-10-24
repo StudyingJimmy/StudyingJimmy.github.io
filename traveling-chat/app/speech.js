@@ -17,6 +17,7 @@ export class Speaker {
     this.cloudEnabled = true;
     this.cloudAbort = null;
     this.audio = null;
+    this.streamSources = new Set();
     this.onChunk = null;   // (text) => void   当前朗读的句子（做字幕）
     this.onStateChange = null; // (speaking:boolean) => void
 
@@ -81,16 +82,99 @@ export class Speaker {
     if (!chunks.length) return;
     if (this.cloudEnabled) {
       try {
-        await this._speakCloud(chunks);
+        // 全文只提交一次；音频按块抵达时立即播放，不会把句子拆成两次朗读。
+        await this._speakCloudStream(chunks.join(' '));
         return;
       } catch (err) {
         if (this.cancelled) return;
-        console.warn('云端语音不可用，改用浏览器语音', err);
-        this.cloudEnabled = false;
+        console.warn('流式云端语音不可用，改用完整音频合成', err);
         this._done();
+        try {
+          await this._speakCloud(chunks);
+          return;
+        } catch (fallbackErr) {
+          if (this.cancelled) return;
+          console.warn('云端语音不可用，改用浏览器语音', fallbackErr);
+          this.cloudEnabled = false;
+          this._done();
+        }
       }
     }
     return this._speakBrowser(chunks.join(' '));
+  }
+
+  /* HTTP SSE：请求体仍是一整段回答，服务端返回连续的 24 kHz PCM 块。
+     直接用 Web Audio 排队，首块一到便开口，后续块无缝衔接。 */
+  async _speakCloudStream(text) {
+    const ctx = await this._ctx();
+    if (!ctx) throw new Error('浏览器不支持 WebAudio');
+
+    this.stop();
+    this.cancelled = false;
+    this.speaking = true;
+    this.onChunk?.(text);
+    this.cloudAbort = new AbortController();
+    const res = await fetch(apiUrl('/api/tts-stream'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: this.cloudAbort.signal
+    });
+    if (!res.ok || !res.body) {
+      let detail = '';
+      try { detail = (await res.json()).error || ''; } catch {}
+      throw new Error(detail || `流式语音合成失败 HTTP ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let pending = '', nextStart = ctx.currentTime + 0.04, received = false;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      pending += decoder.decode(value, { stream: true });
+      const events = pending.split('\n\n');
+      pending = events.pop() || '';
+      for (const event of events) {
+        const data = event.split('\n').filter(line => line.startsWith('data:'))
+          .map(line => line.slice(5).trim()).join('');
+        if (!data) continue;
+        let packet;
+        try { packet = JSON.parse(data); } catch { continue; }
+        const encoded = packet.output?.audio?.data;
+        if (!encoded) continue;
+        const samples = this._pcm16(encoded);
+        if (!samples.length || this.cancelled) continue;
+        const buffer = ctx.createBuffer(1, samples.length, 24000);
+        const channel = buffer.getChannelData(0);
+        for (let i = 0; i < samples.length; i++) channel[i] = samples[i] / 32768;
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        this.streamSources.add(source);
+        source.onended = () => this.streamSources.delete(source);
+        const startAt = Math.max(ctx.currentTime + 0.025, nextStart);
+        source.start(startAt);
+        nextStart = startAt + buffer.duration;
+        if (!received) { received = true; this._started(); }
+      }
+    }
+    if (!received) throw new Error('流式语音没有返回音频');
+    const remainingMs = Math.max(0, (nextStart - ctx.currentTime) * 1000 + 40);
+    await new Promise(resolve => setTimeout(resolve, remainingMs));
+    if (!this.cancelled) this._done();
+  }
+
+  _pcm16(base64) {
+    const raw = atob(base64);
+    const length = Math.floor(raw.length / 2);
+    const result = new Int16Array(length);
+    for (let i = 0; i < length; i++) {
+      const low = raw.charCodeAt(i * 2);
+      const high = raw.charCodeAt(i * 2 + 1);
+      result[i] = (high << 8) | low;
+    }
+    return result;
   }
 
   /* 云端合成：先取第一句就开播，后面的句子在播第一句时并行预取，
@@ -217,6 +301,8 @@ export class Speaker {
     this.cancelled = true;
     this.cloudAbort?.abort();
     this.cloudAbort = null;
+    for (const source of this.streamSources) { try { source.stop(); } catch {} }
+    this.streamSources.clear();
     if (this._src) { try { this._src.stop(); } catch {} this._src = null; }
     if (this.audio) { try { this.audio.pause(); } catch {} this.audio = null; }
     if (this.synth) { try { this.synth.cancel(); } catch {} }

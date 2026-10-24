@@ -10,14 +10,6 @@ const scene = SCENARIOS[0];
 let busy = false;
 let toastTimer;
 let pendingSubtitle = '';
-let earlySpeech = null;
-let earlySpeechText = '';
-
-// 流式回答中一出现完整句子，就可以提前送去合成；不必等整段回答结束。
-function firstCompleteSentence(value) {
-  const match = String(value || '').trim().match(/^(.+?[.!?])(?:\s|$)/);
-  return match ? match[1].trim() : '';
-}
 function toast(message, ms = 4500) {
   const el = $('toast'); el.textContent = message; el.hidden = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, ms);
@@ -66,32 +58,16 @@ async function studentSaid(text) {
   text = String(text || '').trim();
   if (!text || busy) return;
   busy = true; speaker.stop();
-  earlySpeech = null;
-  earlySpeechText = '';
   message('student', text);
   const bubble = message('lily', '…');
   status('正在思考…', true);
   try {
     const answer = await brain.respond(text, { onDelta: value => {
       bubble.textContent = value; $('chat').scrollTop = $('chat').scrollHeight;
-      // LLM 还在继续生成时，先让 Lily 说出已经完整的第一句。
-      if (!earlySpeech) {
-        const first = firstCompleteSentence(value);
-        if (first) {
-          earlySpeechText = first;
-          earlySpeech = speaker.speak(first).catch(() => {});
-        }
-      }
     }});
     bubble.textContent = answer;
     bubble.closest('.msg').classList.add('speaking');
-    if (earlySpeech) {
-      await earlySpeech;
-      const remaining = answer.slice(earlySpeechText.length).trim();
-      if (remaining) await speaker.speak(remaining);
-    } else {
-      await speaker.speak(answer);
-    }
+    await speaker.speak(answer);
     bubble.closest('.msg').classList.remove('speaking');
     if (brain.fallbackReason) {
       $('mode-badge').textContent = '模型连接失败'; $('mode-badge').classList.remove('online');

@@ -56,15 +56,35 @@ async function tts(request, env) {
   return new Response(sound, { headers: { ...corsHeaders(request, env), 'Content-Type': 'audio/wav', 'Cache-Control': 'no-store' } });
 }
 
+// 一次接收完整文本，但在合成过程中按 PCM 音频块返回。浏览器不必等整段音频生成完。
+async function ttsStream(request, env) {
+  const { text } = await request.json();
+  const input = String(text || '').trim().slice(0, 600);
+  if (!input) return error(request, env, '缺少文本', 400);
+  const upstream = await fetch('https://dashscope.aliyuncs.com/api/v1/services/audio/tts/SpeechSynthesizer', {
+    method: 'POST',
+    headers: auth(env, { 'Content-Type': 'application/json', Accept: 'text/event-stream', 'X-DashScope-SSE': 'enable' }),
+    body: JSON.stringify({
+      model: env.TTS_MODEL || 'cosyvoice-v3-flash',
+      input: { text: input, voice: env.TTS_VOICE || 'longhuhu_v3', format: 'pcm', sample_rate: 24000 }
+    })
+  });
+  if (!upstream.ok || !upstream.body) return error(request, env, `流式语音服务返回 HTTP ${upstream.status}`, 502);
+  return new Response(upstream.body, {
+    headers: { ...corsHeaders(request, env), 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' }
+  });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(request, env) });
     if (!env.DASHSCOPE_API_KEY) return error(request, env, '服务尚未配置 API Key', 503);
     const path = new URL(request.url).pathname;
     try {
-      if (request.method === 'GET' && path === '/api/config') return json(request, env, { online: true, model: env.CHAT_MODEL || 'qwen-plus' });
+      if (request.method === 'GET' && path === '/api/config') return json(request, env, { online: true, model: env.CHAT_MODEL || 'qwen-plus', ttsStreaming: true });
       if (request.method === 'POST' && path === '/api/chat') return chat(request, env);
       if (request.method === 'POST' && path === '/api/asr') return asr(request, env);
+      if (request.method === 'POST' && path === '/api/tts-stream') return ttsStream(request, env);
       if (request.method === 'POST' && path === '/api/tts') return tts(request, env);
       return error(request, env, '未找到接口', 404);
     } catch (cause) { return error(request, env, cause instanceof Error ? cause.message : '服务错误', 500); }
