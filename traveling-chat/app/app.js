@@ -9,9 +9,7 @@ const brain = new Brain();
 const scene = SCENARIOS[0];
 let busy = false;
 let toastTimer;
-const idleGif = '../assets/lily-listening.webp';
-const talkGif = '../assets/lily-speaking.webp';
-new Image().src = talkGif;
+let pendingSubtitle = '';
 function toast(message, ms = 4500) {
   const el = $('toast'); el.textContent = message; el.hidden = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, ms);
@@ -28,12 +26,16 @@ function message(role, text) {
   row.append(who, bubble); $('chat').append(row); $('chat').scrollTop = $('chat').scrollHeight;
   return bubble;
 }
-speaker.onChunk = text => { $('subtitle').textContent = text; $('subtitle').classList.add('show'); };
+speaker.onChunk = text => {
+  pendingSubtitle = text;
+  // The chunk is queued before the browser actually begins sound output.
+  // Wait for onStateChange so text and the preloaded talk animation start together.
+  if (speaker.playing) { $('subtitle').textContent = text; $('subtitle').classList.add('show'); }
+};
 speaker.onStateChange = on => {
   document.body.classList.toggle('is-speaking', on);
-  const next = on ? talkGif : idleGif;
-  if ($('avatar').getAttribute('src') !== next) $('avatar').src = next;
-  if (!on) $('subtitle').classList.remove('show');
+  if (on && pendingSubtitle) { $('subtitle').textContent = pendingSubtitle; $('subtitle').classList.add('show'); }
+  if (!on) { $('subtitle').classList.remove('show'); pendingSubtitle = ''; }
   status(on ? '正在说话…' : '准备好了', on);
 };
 /* 边说边出字：先挂一条虚线气泡，识别结果不断覆盖它 */
