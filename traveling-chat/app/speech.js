@@ -217,7 +217,26 @@ export class Speaker {
   /* 在用户的直接点击中恢复音频上下文。回答生成完成后再恢复，
      部分浏览器会推迟输出，甚至截掉音频开头。 */
   prime() {
-    this._ctx().catch(() => {});
+    // Safari is stricter than Chromium: resuming an AudioContext alone is not
+    // always enough once the later network request finishes.  Start a silent
+    // one-sample source while this click/keypress still has user activation.
+    // It unlocks the same context used for the cloud PCM stream.
+    if (this._ac === undefined) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this._ac = AC ? new AC() : null;
+    }
+    const ctx = this._ac;
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    try {
+      const silent = ctx.createBuffer(1, 1, ctx.sampleRate || 24000);
+      const source = ctx.createBufferSource();
+      source.buffer = silent;
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch {
+      // _ctx() and browser speech remain available as the existing fallbacks.
+    }
   }
 
   async _fetchAudio(text, signal) {
