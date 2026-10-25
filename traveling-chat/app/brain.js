@@ -14,7 +14,7 @@ const hasChinese = (s) => /[\u4e00-\u9fff]/.test(s);
 // cannot appear in class.
 const cleanEnglishReply = (value) => String(value || '')
   .replace(/\*\*|__|`/g, ' ')
-  .replace(/[^A-Za-z\s.,!?'']/g, ' ')
+  .replace(/[^A-Za-z0-9\s.,!?'']/g, ' ')
   .replace(/\s+/g, ' ')
   .trim();
 
