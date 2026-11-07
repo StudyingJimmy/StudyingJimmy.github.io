@@ -1,4 +1,3 @@
-// Public service is paused. Keep the former endpoint here for a one-line,
-// reversible restore without exposing it to the active frontend.
-// window.LILY_API_BASE = 'https://traveling-chat-ddfzqvkpbg.cn-hangzhou.fcapp.run';
+// Public service is paused. The previous endpoint remains recoverable from
+// Git history, while the active frontend deliberately has no API target.
 window.LILY_API_BASE = '';
