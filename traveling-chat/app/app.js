@@ -121,6 +121,7 @@ async function onMic() {
 }
 
 function boot() {
+  if (document.body.classList.contains('service-offline')) return;
   loadConfig();
   brain.start(scene);            // 没有登场独白，等学生先开口
   $('mic').addEventListener('click', onMic);
